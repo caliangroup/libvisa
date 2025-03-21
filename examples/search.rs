@@ -1,4 +1,4 @@
-use visa::{error::Error, ResourceManager};
+use libvisa::{error::Error, ResourceManager};
 
 fn main() -> Result<(), Error> {
     // Open the resource manager and search for a matching device

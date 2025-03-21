@@ -1,3 +1,13 @@
+//! Error handling for the VISA library
+#![expect(
+    clippy::cast_possible_wrap,
+    reason = "Needed for compatibility with the VISA library"
+)]
+#![expect(
+    clippy::cast_sign_loss,
+    reason = "Needed for compatibility with the VISA library"
+)]
+
 use crate::bindings;
 use std::{
     ffi::CString,
@@ -7,60 +17,75 @@ use std::{
 /// An
 #[derive(Debug, Clone, Default)]
 pub struct Error {
+    /// The error type returned by the VISA library
     pub status: ErrorType,
+
+    /// A description of the error
     pub description: Option<String>,
 }
 impl Error {
+    const ERROR_OK: i32 = bindings::VI_SUCCESS as i32;
     const MAX_DESC_LENGTH: usize = 1024;
 
+    /// Create an error from a status code returned by the VISA library.
+    ///
+    /// If a session is provided, the error description will be fetched from the session.
+    #[must_use]
     pub fn new(raw_status: i32, session: Option<bindings::ViSession>) -> Self {
-        if raw_status == bindings::VI_SUCCESS as i32 {
-            Self::default()
-        } else if session.is_none() {
-            Self {
-                status: ErrorType::from(raw_status),
-                description: None,
-            }
-        } else {
-            let session = session.unwrap();
-            let mut buffer: Vec<i8> = vec![0; Self::MAX_DESC_LENGTH];
-            let status = unsafe {
-                bindings::viStatusDesc(session, raw_status, buffer.as_mut_slice().as_mut_ptr())
-            };
+        if raw_status == Self::ERROR_OK {
+            return Self::default();
+        }
 
-            if status != bindings::VI_SUCCESS as i32 {
-                Self::default()
-            } else {
-                // Transform into a u8 buffer
-                let buffer: Vec<u8> = buffer.iter().map(|&x| x as u8).collect();
+        match session {
+            Some(session) => {
+                // Read the error description from the device
+                let mut buffer: Vec<i8> = vec![0; Self::MAX_DESC_LENGTH];
+                let status = unsafe {
+                    bindings::viStatusDesc(session, raw_status, buffer.as_mut_slice().as_mut_ptr())
+                };
 
-                // Into string
-                let desc = CString::from_vec_with_nul(buffer)
-                    .ok()
-                    .map(|cstr| cstr.into_string().ok());
+                let description = (status == Self::ERROR_OK).then(|| {
+                    // Transform into a u8 buffer
+                    let buffer: Vec<u8> = buffer.iter().map(|&x| x as u8).collect();
+
+                    // Into string
+                    CString::from_vec_with_nul(buffer)
+                        .ok()
+                        .and_then(|cstr| cstr.into_string().ok())
+                        .unwrap_or_default()
+                });
+
                 Self {
                     status: ErrorType::from(raw_status),
-                    description: desc.flatten(),
+                    description,
                 }
             }
+
+            None => Self {
+                status: ErrorType::from(raw_status),
+                description: None,
+            },
         }
     }
 
     /// Create an error from a message
-    pub fn from_msg(description: impl ToString) -> Self {
+    pub fn from_msg(description: impl AsRef<str>) -> Self {
         Self {
             status: ErrorType::default(),
-            description: Some(description.to_string()),
+            description: Some(description.as_ref().to_string()),
         }
     }
 
-    /// Wrap a VISA binding function and return an error if the status is not `VI_SUCCESS`
+    /// Wrap a call to a VISA binding
+    ///
+    /// # Errors
+    /// Retiurns an error if the status code is not `VI_SUCCESS`
     pub fn wrap_binding<F>(session: Option<bindings::ViSession>, f: F) -> Result<(), Self>
     where
         F: FnOnce() -> i32,
     {
         let status = f();
-        if status == bindings::VI_SUCCESS as i32 {
+        if status == Self::ERROR_OK {
             Ok(())
         } else {
             Err(Self::new(status, session))
@@ -143,6 +168,7 @@ impl From<std::string::FromUtf8Error> for Error {
 /// An error type returned by the VISA library
 #[repr(i32)]
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum ErrorType {
     #[default]
     SystemError = bindings::VI_ERROR_SYSTEM_ERROR,

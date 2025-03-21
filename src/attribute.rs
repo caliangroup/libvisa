@@ -3,8 +3,22 @@
 //! Note: Not all attributes are implemented yet.
 //! For those Not implementing AsViReadable/AsViWritable yet, use
 //! `Session::get_attribute_raw` and `Session::set_attribute_raw` to get/set the raw value of the attribute.
+#![expect(
+    clippy::cast_possible_truncation,
+    reason = "Needed for compatibility with the VISA library"
+)]
+#![expect(
+    clippy::cast_possible_wrap,
+    reason = "Needed for compatibility with the VISA library"
+)]
+#![expect(
+    clippy::cast_sign_loss,
+    reason = "Needed for compatibility with the VISA library"
+)]
+
 use crate::bindings;
 
+/// A type of atribute that can be read from a device
 pub trait AsViReadable {
     /// The VISA attribute type for this attribute
     const VI_ATTR: u32;
@@ -20,13 +34,20 @@ pub trait AsViReadable {
     where
         Self: Sized;
 
+    /// Get a reference to the attribute value
     fn value(&self) -> &Self::Value;
+
+    /// Convert the attribute value to a raw VISA attribute value
     fn into_value(self) -> Self::Value;
 }
+
+/// A type of attribute that can be written to a device
 pub trait AsViWritable {
+    /// Convert the attribute value to a raw VISA attribute state
     fn as_vi(&self) -> bindings::ViAttrState;
 }
 
+/// Macro simplifying the implementation of AsViReadable/AsViWritable for an attribute
 macro_rules! impl_attr {
     (
         $($docs:literal)*
@@ -113,7 +134,7 @@ macro_rules! impl_attr {
                 Some(Self(value))
             }
             into = |value| {
-                value as bindings::ViAttrState
+                bindings::ViAttrState::from(value)
             }
         }
     };
@@ -128,7 +149,7 @@ macro_rules! impl_attr {
                 Some(Self(value))
             }
             into = |value| {
-                value as bindings::ViAttrState
+                bindings::ViAttrState::from(value)
             }
         }
     };
@@ -177,6 +198,8 @@ macro_rules! impl_attr {
         #[derive(Debug, Clone, PartialEq, Eq)]
         pub struct $name(pub $value);
         impl $name {
+            /// Create a new instance of the attribute
+            #[must_use]
             pub fn new(value: $value) -> Self {
                 Self(value)
             }
@@ -208,6 +231,8 @@ macro_rules! impl_attr {
     };
 }
 
+/// Attribute states
+#[allow(missing_docs)]
 #[repr(i32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum State {
@@ -273,10 +298,12 @@ impl_attr!(
         }
     }
     into = |value| {
-        value as bindings::ViAttrState
+        bindings::ViAttrState::from(value)
     }
 );
 
+/// Fast Data Channel (FDC) mode
+#[allow(missing_docs)]
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum FdcModeType {
@@ -336,7 +363,7 @@ impl_attr!(
     TmoValue(u32, std::time::Duration),
 
     from = |value| {
-        Some(Self(std::time::Duration::from_millis(value as u64)))
+        Some(Self(std::time::Duration::from_millis(u64::from(value))))
     }
 
     into = |value| {
@@ -344,6 +371,8 @@ impl_attr!(
     }
 );
 
+/// The type of the interface
+#[allow(missing_docs)]
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum InterfaceType {
@@ -359,7 +388,7 @@ impl_attr!(
     "VI_ATTR_INTF_TYPE specifies the interface type of the given session."
     IntfType(u16, InterfaceType),
     from = |value| {
-        let value = value as u32;
+        let value = u32::from(value);
         match value {
             x if x == bindings::VI_INTF_GPIB => Some(Self(InterfaceType::Gpib)),
             x if x == bindings::VI_INTF_VXI => Some(Self(InterfaceType::Vxi)),
@@ -412,6 +441,8 @@ impl_attr!(
     AsrlDataBits(u16)
 );
 
+/// The type of the parity used with every frame transmitted and received.
+#[allow(missing_docs)]
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum AsrlParityType {
@@ -426,7 +457,7 @@ impl_attr!(
     "VI_ATTR_ASRL_PARITY is the parity used with every frame transmitted and received."
     AsrlParity(u16, AsrlParityType),
     from = |value| {
-        let value = value as u32;
+        let value = u32::from(value);
         match value {
             x if x == AsrlParityType::None as u32 => Some(Self(AsrlParityType::None)),
             x if x == AsrlParityType::Odd as u32 => Some(Self(AsrlParityType::Odd)),
@@ -441,6 +472,8 @@ impl_attr!(
     }
 );
 
+/// The number of stop bits used to indicate the end of a frame.
+#[allow(missing_docs)]
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum AsrlStopBitsType {
@@ -455,7 +488,7 @@ impl_attr!(
     AsrlStopBits(u16, AsrlStopBitsType),
 
     from = |value| {
-        let value = value as u32;
+        let value = u32::from(value);
         match value {
             x if x == AsrlStopBitsType::One as u32 => Some(Self(AsrlStopBitsType::One)),
             x if x == AsrlStopBitsType::One5 as u32 => Some(Self(AsrlStopBitsType::One5)),
@@ -469,6 +502,7 @@ impl_attr!(
     }
 );
 
+/// The type of flow control used by the transfer mechanism.
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum AsrlFlowCntrlType {
@@ -493,7 +527,7 @@ impl_attr!(
     AsrlFlowCntrl(u16, AsrlFlowCntrlType),
 
     from = |value| {
-        let value = value as u32;
+        let value = u32::from(value);
         match value {
             x if x == AsrlFlowCntrlType::None as u32 => Some(Self(AsrlFlowCntrlType::None)),
             x if x == AsrlFlowCntrlType::XonXoff as u32 => Some(Self(AsrlFlowCntrlType::XonXoff)),
@@ -520,6 +554,7 @@ impl_attr!(
     RdBufSize(ReadOnlyU32)
 );
 
+/// The operational mode of the formatted I/O write buffer.
 #[repr(u32)]
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub enum WrBufOperModeType {
@@ -527,7 +562,7 @@ pub enum WrBufOperModeType {
     /// the buffer is flushed when an END indicator is written to the buffer, or when the buffer fills up.
     OnAccess = bindings::VI_FLUSH_ON_ACCESS,
 
-    /// the write buffer is flushed under the same conditions, and also every time a viPrintf() (or related) operation completes.
+    /// the write buffer is flushed under the same conditions, and also every time a `viPrintf()` (or related) operation completes.
     OnFull = bindings::VI_FLUSH_WHEN_FULL,
 }
 
@@ -536,7 +571,7 @@ impl_attr!(
     WrBufOperMode(u16, WrBufOperModeType),
 
     from = |value| {
-        let value = value as u32;
+        let value = u32::from(value);
         match value {
             x if x == WrBufOperModeType::OnAccess as u32 => Some(Self(WrBufOperModeType::OnAccess)),
             x if x == WrBufOperModeType::OnFull as u32 => Some(Self(WrBufOperModeType::OnFull)),
@@ -784,7 +819,8 @@ impl_attr!(
     }
 
     into = |value| {
-        value.unwrap_or(bindings::VI_NO_SEC_ADDR as u16) as bindings::ViAttrState
+        let value = value.unwrap_or(bindings::VI_NO_SEC_ADDR as u16);
+        bindings::ViAttrState::from(value)
     }
 );
 
@@ -802,6 +838,8 @@ impl_attr!(
     }
 );
 
+/// The type of the GPIB address state
+#[allow(missing_docs)]
 #[repr(i16)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GpibAddrStateType {
@@ -866,6 +904,7 @@ impl_attr!(
 
 /// This attribute specifies the total number of meters of GPIB cable used in the specified GPIB interface.
 /// Valid values are 0 to 15 meters.
+#[allow(missing_docs)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum GpibHs488CableLength {
     NotImplemented,
@@ -894,7 +933,7 @@ impl_attr!(
 
             GpibHs488CableLength::Meters(0) => 1,
             GpibHs488CableLength::Meters(x) if x > 15 => 15,
-            GpibHs488CableLength::Meters(x) => x as i16,
+            GpibHs488CableLength::Meters(x) => i16::from(x),
         }) as bindings::ViAttrState
     }
 
@@ -942,6 +981,8 @@ impl_attr!(
     VxiVmeIntrStatus(ReadOnlyU16)
 );
 
+/// VXI device class type
+#[allow(missing_docs)]
 #[repr(u16)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum VxiDevClassType {
@@ -1383,13 +1424,24 @@ impl_attr!(
     PxiMemSizeBar5(ReadOnlyU32)
 );
 
+/// A string attribute value that cannot be modified.
 pub type ReadOnlyString = String;
+
+/// A boolean attribute value that cannot be modified.
 pub type ReadOnlyBool = bool;
+
+/// A 16-bit unsigned integer attribute value that cannot be modified.
 pub type ReadOnlyU16 = u16;
+
+/// A 32-bit unsigned integer attribute value that cannot be modified.
 pub type ReadOnlyU32 = u32;
+
+/// A 16-bit signed integer attribute value that cannot be modified.
 pub type ReadOnlyI16 = i16;
 
 #[repr(u32)]
+#[allow(missing_docs)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum AttributeType {
     RsrcClass = bindings::VI_ATTR_RSRC_CLASS,
     RsrcName = bindings::VI_ATTR_RSRC_NAME,
@@ -1548,6 +1600,7 @@ pub enum AttributeType {
     PxiMemSizeBar5 = bindings::VI_ATTR_PXI_MEM_SIZE_BAR5,
 }
 
+/// Access modes for opening a session
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum AccessMode {
@@ -1563,6 +1616,6 @@ pub enum AccessMode {
     NoLock = bindings::VI_NO_LOCK,
 
     /// Used to configure attributes to values specified by some external configuration utility
-    /// NI-VISA currently supports VI_LOAD_CONFIG only on Serial INSTR sessions
+    /// NI-VISA currently supports `VI_LOAD_CONFIG` only on Serial INSTR sessions
     LoadConfig = bindings::VI_LOAD_CONFIG,
 }

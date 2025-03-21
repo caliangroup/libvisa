@@ -8,6 +8,7 @@ use crate::{
 pub type ResourceManagerSession = bindings::ViSession;
 
 /// Resource details, obtained by calling `Resource::get_details`
+#[derive(Debug)]
 pub struct ResourceDetails {
     /// Interface type - Corresponds to the `VI_ATTR_INTF_TYPE` attribute.
     pub interface_type: <attribute::IntfType as attribute::AsViReadable>::Value,
@@ -27,6 +28,7 @@ pub struct ResourceDetails {
 }
 
 /// Resource, obtained by calling `ResourceManager::find_resources`
+#[derive(Debug)]
 pub struct Resource {
     interface: String,
     rm: ResourceManagerSession,
@@ -45,11 +47,15 @@ impl Resource {
     const MAX_DESC: usize = 256;
 
     /// Returns a resource name that can be used to open a session
+    #[must_use]
     pub fn interface(&self) -> &str {
         &self.interface
     }
 
     /// Get extended details for the resource
+    ///
+    /// # Errors
+    /// Will return an error if the resource cannot be found, or the device returns an error
     pub fn get_details(&self) -> Result<ResourceDetails, Error> {
         let mut interface = 0u16;
         let mut board = 0u16;
@@ -97,6 +103,7 @@ impl Resource {
 }
 
 /// Iterator over search results from `ResourceManager::search`
+#[derive(Debug)]
 pub struct ResourceSearchResult {
     rm: ResourceManagerSession,
     len: usize,
@@ -112,7 +119,7 @@ impl ResourceSearchResult {
 
         let mut desc = [0u8; Self::MAX_INTERFACE];
         Error::wrap_binding(Some(self.list), || unsafe {
-            bindings::viFindNext(self.list, desc.as_mut_ptr() as *mut i8)
+            bindings::viFindNext(self.list, desc.as_mut_ptr().cast::<i8>())
         })?;
 
         if let Ok(cstr) = std::ffi::CStr::from_bytes_with_nul(&desc) {
@@ -140,7 +147,7 @@ impl Iterator for ResourceSearchResult {
             return None;
         }
 
-        let next = self.next().take();
+        let next = self.next();
         self.advance().ok()?;
         next
     }
@@ -155,8 +162,15 @@ fn set_singleton_rm_id(id: bindings::ViSession) {
 }
 
 /// Resource manager, used to search for resources and open sessions
+#[derive(Debug)]
 pub struct ResourceManager(bindings::ViSession);
 impl ResourceManager {
+    /// Create a new resource manager
+    ///
+    /// If a resource manager already exists, it will be reused
+    ///
+    /// # Errors
+    /// Will return an error if the resource manager cannot be created
     pub fn new() -> Result<Self, Error> {
         if let Some(id) = get_singleton_rm_id() {
             return Ok(Self(id));
@@ -177,6 +191,9 @@ impl ResourceManager {
     /// The search is case-insensitive
     ///
     /// Returns an iterator over identifiers that can be used to open a session
+    ///
+    /// # Errors
+    /// Will return an error if the search fails
     pub fn search(&self, expr: &str) -> Result<ResourceSearchResult, Error> {
         let expr = std::ffi::CString::new(expr)?;
         let mut list: bindings::ViFindList = bindings::ViFindList::default();

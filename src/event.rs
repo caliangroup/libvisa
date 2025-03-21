@@ -1,8 +1,15 @@
+//! Async handling for VISA events
+#![expect(
+    clippy::cast_possible_wrap,
+    reason = "Needed for compatibility with the VISA library"
+)]
+
 use crate::{bindings, error::Error};
 
-/// Event type
+/// The types of events that can be handled
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum Event {
     IoCompletion = bindings::VI_EVENT_IO_COMPLETION,
     Trig = bindings::VI_EVENT_TRIG,
@@ -46,21 +53,54 @@ impl TryFrom<u32> for Event {
     }
 }
 
-/// Event handling mechanism
+/// Event handling mechanisms
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum HandlingMechanism {
     Queue = bindings::VI_QUEUE,
     Handler = bindings::VI_HNDLR,
     SuspendHandler = bindings::VI_SUSPEND_HNDLR,
 }
 
-pub type NoHandlerData = std::ffi::c_void;
+/// A simple handler for VISA events.
+///
+/// If you need to make use of the visa `user_data` field, use [`HandlerWithData`] instead.
 pub trait Handler {
-    /// Data type expected by the handler, use `NoHandlerData` if no data is needed
+    /// Handles the event itself
+    ///
+    /// # Errors
+    /// Should return an error if the event cannot be handled
+    fn handle(
+        session: bindings::ViSession,
+        event_type: Event,
+        event: bindings::ViEvent,
+    ) -> Result<(), Error>;
+}
+impl<T: Handler> HandlerWithData for T {
+    type Data = std::ffi::c_void;
+
+    fn handle(
+        session: bindings::ViSession,
+        event_type: Event,
+        event: bindings::ViEvent,
+        _user_data: &Self::Data,
+    ) -> Result<(), Error> {
+        Self::handle(session, event_type, event)
+    }
+}
+
+/// A more complex handler with the ability to use provided data from VISA.
+///
+/// If you do not need that, use [`Handler`] instead.
+pub trait HandlerWithData {
+    /// Data type expected by the handler, use `std::ffi::c_void` if no data is needed
     type Data;
 
-    /// Handle the event
+    /// Handles the event itself
+    ///
+    /// # Errors
+    /// Should return an error if the event cannot be handled
     fn handle(
         session: bindings::ViSession,
         event_type: Event,
@@ -77,16 +117,17 @@ pub trait Handler {
         event: bindings::ViEvent,
         user_data: bindings::ViAddr,
     ) -> bindings::ViStatus {
-        let event_type = match Event::try_from(event_type) {
-            Ok(event_type) => event_type,
-            Err(_) => return bindings::VI_ERROR_INV_EVENT,
+        // Convert the event type
+        let Ok(event_type) = Event::try_from(event_type) else {
+            return bindings::VI_ERROR_INV_EVENT;
         };
 
-        let user_data: *mut Self::Data = user_data as *mut _ as *mut Self::Data;
+        // Janky cast to get the user data
+        let user_data: *mut Self::Data = user_data.cast::<Self::Data>();
         let user_data: &Self::Data = &*user_data;
 
         match Self::handle(session, event_type, event, user_data) {
-            Ok(_) => bindings::VI_SUCCESS as bindings::ViStatus,
+            Ok(()) => bindings::VI_SUCCESS as bindings::ViStatus,
             Err(e) => e.status as bindings::ViStatus,
         }
     }

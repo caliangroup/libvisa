@@ -1,5 +1,5 @@
+use libvisa::{attribute, error::Error, ResourceManager, Session};
 use std::time::Duration;
-use visa::{attribute, error::Error, ResourceManager, Session};
 
 fn main() -> Result<(), Error> {
     // Open the resource manager and search for a matching device
