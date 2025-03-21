@@ -10,22 +10,28 @@ use crate::{
     error::Error,
     event, ResourceManager,
 };
-use std::{future, path::Path, vec};
+use std::{
+    future,
+    path::Path,
+    sync::{Mutex, OnceLock},
+    vec,
+};
 
 //------------ Async IO signal table -----------------------------------
 
-lazy_static::lazy_static! {
-    static ref IO_SIGNAL_TABLE: std::sync::Mutex<std::collections::HashSet<(bindings::ViSession, bindings::ViJobId)>>
-        = std::sync::Mutex::new(std::collections::HashSet::new());
+type IoSignalTable = std::collections::HashSet<(bindings::ViSession, bindings::ViJobId)>;
+fn io_signal_table() -> &'static Mutex<IoSignalTable> {
+    static TABLE: OnceLock<Mutex<IoSignalTable>> = OnceLock::new();
+    TABLE.get_or_init(|| Mutex::new(IoSignalTable::new()))
 }
 
 fn signal_done(session: bindings::ViSession, job_id: bindings::ViJobId) {
-    let mut table = IO_SIGNAL_TABLE.lock().unwrap();
+    let mut table = io_signal_table().lock().unwrap();
     table.insert((session, job_id));
 }
 
 fn check_signal_done(session: bindings::ViSession, job_id: bindings::ViJobId) -> bool {
-    let mut table = IO_SIGNAL_TABLE.lock().unwrap();
+    let mut table = io_signal_table().lock().unwrap();
     table.remove(&(session, job_id))
 }
 

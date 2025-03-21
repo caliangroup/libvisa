@@ -9,4 +9,3 @@ repository = "https://github.com/caliangroup/libvisa"
 readme = "README.md"
 
 [dependencies]
-lazy_static = "1.5.0"
