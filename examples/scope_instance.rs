@@ -1,4 +1,8 @@
-use libvisa::{attribute, error::Error, ResourceManager, Session};
+use libvisa::{
+    attribute::{misc::TmoValue, AsViWritable},
+    error::Error,
+    ResourceManager, Session,
+};
 use std::time::Duration;
 
 fn main() -> Result<(), Error> {
@@ -9,7 +13,7 @@ fn main() -> Result<(), Error> {
 
     // Open a session to the device, set a timeout
     let mut session = Session::new(&manager, resource.as_ref(), Default::default())?;
-    session.set_attribute(attribute::TmoValue(Duration::from_millis(500)))?;
+    TmoValue::write(&mut session, Duration::from_millis(500))?;
 
     // Process IDN string
     // This will be a comma separated list in the form

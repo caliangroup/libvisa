@@ -11,10 +11,10 @@ pub type ResourceManagerSession = bindings::ViSession;
 #[derive(Debug)]
 pub struct ResourceDetails {
     /// Interface type - Corresponds to the `VI_ATTR_INTF_TYPE` attribute.
-    pub interface_type: <attribute::IntfType as attribute::AsViReadable>::Value,
+    pub interface_type: <attribute::misc::IntfType as attribute::AsViReadable>::Value,
 
     /// Board number - Corresponds to the `VI_ATTR_INTF_NUM` attribute.
-    pub board_number: <attribute::IntfNum as attribute::AsViReadable>::Value,
+    pub board_number: <attribute::misc::IntfNum as attribute::AsViReadable>::Value,
 
     /// Class - Corresponds to the `VI_ATTR_RSRC_CLASS` attribute.
     pub class: String,
@@ -76,12 +76,13 @@ impl Resource {
             )
         })?;
 
-        let interface_type: <attribute::IntfType as attribute::AsViReadable>::RawValue = 0;
+        let interface_type: <attribute::misc::IntfType as attribute::AsViReadable>::RawValue = 0;
         let interface_type =
-            attribute::IntfType::from_vi(interface_type).ok_or_else(Error::default)?;
+            attribute::misc::IntfType::from_vi(interface_type).ok_or_else(Error::default)?;
 
-        let board_number: <attribute::IntfNum as attribute::AsViReadable>::RawValue = 0;
-        let board_number = attribute::IntfNum::from_vi(board_number).ok_or_else(Error::default)?;
+        let board_number: <attribute::misc::IntfNum as attribute::AsViReadable>::RawValue = 0;
+        let board_number =
+            attribute::misc::IntfNum::from_vi(board_number).ok_or_else(Error::default)?;
 
         let cstr = unsafe { std::ffi::CStr::from_ptr(class.as_ptr()) };
         let class = cstr.to_string_lossy().into_owned();

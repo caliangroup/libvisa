@@ -401,7 +401,9 @@ impl Session {
     where
         T: attribute::AsViReadable,
     {
-        unsafe { self.get_attribute_raw(T::VI_ATTR) }
+        let raw = unsafe { self.get_attribute_raw::<T::RawValue>(T::VI_ATTR) }?;
+        let attr = T::from_vi(raw).ok_or_else(|| Error::from_msg("Invalid attribute value"))?;
+        Ok(attr.into_value())
     }
 
     /// Set an attribute for the session
@@ -415,10 +417,11 @@ impl Session {
     /// # Errors
     /// Will return an error if the attribute cannot be set
     #[allow(clippy::needless_pass_by_value)]
-    pub fn set_attribute<T>(&self, attribute: T) -> Result<(), Error>
+    pub fn set_attribute<T>(&mut self, value: T::Value) -> Result<(), Error>
     where
         T: attribute::AsViReadable + attribute::AsViWritable,
     {
+        let attribute = T::from_value(value);
         let value = attribute.as_vi();
         unsafe { self.set_attribute_raw(T::VI_ATTR, value) }
     }

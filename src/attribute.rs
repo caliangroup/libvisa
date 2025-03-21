@@ -18,1411 +18,18 @@
 
 use crate::bindings;
 
-/// A type of atribute that can be read from a device
-pub trait AsViReadable {
-    /// The VISA attribute type for this attribute
-    const VI_ATTR: u32;
-
-    /// The raw type of the attribute expected by VISA
-    type RawValue;
-
-    /// The type of the attribute value after conversion
-    type Value;
-
-    /// Convert a raw VISA attribute value to the attribute value
-    fn from_vi(value: Self::RawValue) -> Option<Self>
-    where
-        Self: Sized;
-
-    /// Get a reference to the attribute value
-    fn value(&self) -> &Self::Value;
-
-    /// Convert the attribute value to a raw VISA attribute value
-    fn into_value(self) -> Self::Value;
-}
-
-/// A type of attribute that can be written to a device
-pub trait AsViWritable {
-    /// Convert the attribute value to a raw VISA attribute state
-    fn as_vi(&self) -> bindings::ViAttrState;
-}
-
-/// Macro simplifying the implementation of AsViReadable/AsViWritable for an attribute
-macro_rules! impl_attr {
-    (
-        $($docs:literal)*
-        $name:ident(ReadOnlyI16)
-    ) => {
-        impl_attr! {
-            $($docs)*
-            $name(i16, ReadOnlyI16), from = |value| {
-                Some(Self(value))
-            }
-        }
-    };
-
-    (
-        $($docs:literal)*
-        $name:ident(ReadOnlyBool)
-    ) => {
-        impl_attr! {
-            $($docs)*
-            $name(bindings::ViBoolean, bool),
-            from = |value| {
-                match value {
-                    x if x == bindings::VI_TRUE as bindings::ViBoolean => Some(Self(true)),
-                    x if x == bindings::VI_FALSE as bindings::ViBoolean => Some(Self(false)),
-                    _ => None,
-                }
-            }
-            into = |value| {
-                if value {
-                    bindings::VI_TRUE as bindings::ViAttrState
-                } else {
-                    bindings::VI_FALSE as bindings::ViAttrState
-                }
-            }
-        }
-    };
-
-    (
-        $($docs:literal)*
-        $name:ident(ReadOnlyU32)
-    ) => {
-        impl_attr! {
-            $($docs)*
-            $name(u32, ReadOnlyU32), from = |value| {
-                Some(Self(value))
-            }
-        }
-    };
-
-    (
-        $($docs:literal)*
-        $name:ident(ReadOnlyU16)
-    ) => {
-        impl_attr! {
-            $($docs)*
-            $name(u16, ReadOnlyU16), from = |value| {
-                Some(Self(value))
-            }
-        }
-    };
-
-    (
-        $($docs:literal)*
-        $name:ident(u32)
-    ) => {
-        impl_attr! {
-            $($docs)*
-            $name(u32, u32), from = |value| {
-                Some(Self(value))
-            }
-            into = |value| {
-                value as bindings::ViAttrState
-            }
-        }
-    };
-
-    (
-        $($docs:literal)*
-        $name:ident(u16)
-    ) => {
-        impl_attr! {
-            $($docs)*
-            $name(u16, u16), from = |value| {
-                Some(Self(value))
-            }
-            into = |value| {
-                bindings::ViAttrState::from(value)
-            }
-        }
-    };
-
-    (
-        $($docs:literal)*
-        $name:ident(u8)
-    ) => {
-        impl_attr! {
-            $($docs)*
-            $name(u8, u8), from = |value| {
-                Some(Self(value))
-            }
-            into = |value| {
-                bindings::ViAttrState::from(value)
-            }
-        }
-    };
-
-    (
-        $($docs:literal)*
-        $name:ident(bool)
-    ) => {
-        impl_attr! {
-            $($docs)*
-            $name(bindings::ViBoolean, bool), from = |value| {
-                match value {
-                    x if x == bindings::VI_TRUE as bindings::ViBoolean => Some(Self(true)),
-                    x if x == bindings::VI_FALSE as bindings::ViBoolean => Some(Self(false)),
-                    _ => None,
-                }
-            }
-            into = |value| {
-                if value {
-                    bindings::VI_TRUE as bindings::ViAttrState
-                } else {
-                    bindings::VI_FALSE as bindings::ViAttrState
-                }
-            }
-        }
-    };
-
-    (
-        $($docs:literal)*
-        $name:ident(String)
-    ) => {
-        impl_attr! {
-            $($docs)*
-            $name([std::ffi::c_char; 256], String), from = |value| {
-                let value = unsafe { std::ffi::CStr::from_ptr(value.as_ptr()) };
-                Some(Self(value.to_string_lossy().into_owned()))
-            }
-        }
-    };
-
-    (
-        $($docs:literal)*
-        $name:ident($raw:ty, $value:ty), from = |$src_id:ident| $from:block $(into = |$dst_id:ident|$into:block)?
-    ) => {
-        $(#[doc = $docs])*
-        #[derive(Debug, Clone, PartialEq, Eq)]
-        pub struct $name(pub $value);
-        impl $name {
-            /// Create a new instance of the attribute
-            #[must_use]
-            pub fn new(value: $value) -> Self {
-                Self(value)
-            }
-        }
-        impl AsViReadable for $name {
-            const VI_ATTR: u32 = AttributeType::$name as u32;
-            type RawValue = $raw;
-            type Value = $value;
-
-            fn from_vi($src_id: Self::RawValue) -> Option<Self> $from
-
-            fn value(&self) -> &Self::Value {
-                &self.0
-            }
-
-            fn into_value(self) -> Self::Value {
-                self.0
-            }
-        }
-
-        $(
-            impl AsViWritable for $name {
-                fn as_vi(&self) -> bindings::ViAttrState {
-                    let $dst_id = self.0;
-                    $into
-                }
-            }
-        )?
-    };
-}
-
-/// Attribute states
-#[allow(missing_docs)]
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum State {
-    Asserted = bindings::VI_STATE_ASSERTED as i32,
-    Unasserted = bindings::VI_STATE_UNASSERTED as i32,
-    Unknown = bindings::VI_STATE_UNKNOWN,
-}
-
-impl_attr!(
-    "VI_ATTR_RSRC_CLASS specifies the resource class (for example, 'INSTR') as defined by the canonical resource name."
-    RsrcClass(String)
-);
-
-impl_attr!(
-    "VI_ATTR_RSRC_NAME is the unique identifier for a resource."
-    "Refer to VISA Resource Syntax and Examples for the syntax of resource strings and examples."
-    RsrcName(String)
-);
-
-impl_attr!(
-    "VI_ATTR_RSRC_IMPL_VERSION is the resource version that uniquely identifies each of the different revisions or implementations of a resource."
-    "This attribute value is defined by the individual manufacturer and increments with each new revision."
-    "The format of the value has the upper 12 bits as the major number of the version,"
-    "the next lower 12 bits as the minor number of the version,"
-    "and the lowest 8 bits as the sub-minor number of the version."
-    RsrcImplVersion(u32)
-);
-
-impl_attr!(
-    "VI_ATTR_RSRC_LOCK_STATE indicates the current locking state of the resource."
-    "The resource can be unlocked, locked with an exclusive lock, or locked with a shared lock."
-    RsrcLockState(u32, AccessMode),
-
-    from = |value| {
-        let value = match value {
-            x if x == AccessMode::NoLock as u32 => AccessMode::NoLock,
-            x if x == AccessMode::ExclusiveLock as u32 => AccessMode::ExclusiveLock,
-            x if x == AccessMode::SharedLock as u32 => AccessMode::SharedLock,
-            x if x == AccessMode::LoadConfig as u32 => AccessMode::LoadConfig,
-            _ => return None,
-        };
-        Some(Self(value))
-    }
-
-    into = |value| {
-        value as bindings::ViAttrState
-    }
-);
-
-impl_attr!(
-    "VI_ATTR_MAX_QUEUE_LENGTH specifies the maximum number of events that can be queued at any time on the given session. Events that occur after the queue has become full will be discarded."
-    "VI_ATTR_MAX_QUEUE_LENGTH is a Read/Write attribute until the first time viEnableEvent() is called on a session. Thereafter, this attribute is Read Only."
-    MaxQueueLength(u32)
-);
-
-impl_attr!(
-    "VI_ATTR_FDC_CHNL determines which Fast Data Channel (FDC) will be used to transfer the buffer."
-    FdcChnl(u16, u16),
-    from = |value| {
-        match value {
-            0..=7 => Some(Self(value)),
-            _ => None,
-        }
-    }
-    into = |value| {
-        bindings::ViAttrState::from(value)
-    }
-);
-
-/// Fast Data Channel (FDC) mode
-#[allow(missing_docs)]
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum FdcModeType {
-    Normal = bindings::VI_FDC_NORMAL,
-    Stream = bindings::VI_FDC_STREAM,
-}
-impl_attr!(
-    "VI_ATTR_FDC_MODE specifies which Fast Data Channel (FDC) mode to use (either normal or stream mode)."
-    FdcMode(u32, FdcModeType),
-    from = |value| {
-        match value {
-            bindings::VI_FDC_NORMAL => Some(Self(FdcModeType::Normal)),
-            bindings::VI_FDC_STREAM => Some(Self(FdcModeType::Stream)),
-            _ => None,
-        }
-    }
-    into = |value| {
-        value as bindings::ViAttrState
-    }
-);
-
-impl_attr!(
-    "Setting VI_ATTR_FDC_GEN_SIGNAL_EN to VI_TRUE lets the servant send a signal"
-    "when control of the FDC channel is passed back to the commander."
-    "This action frees the commander from having to poll the FDC header while engaging in an FDC transfer."
-    FdcGenSignalEn(bool)
-);
-
-impl_attr!(
-    "Setting VI_ATTR_FDC_USE_PAIR to VI_TRUE specifies to use a channel pair for transferring data. Otherwise, only one channel will be used."
-    FdcUsePair(bool)
-);
-
-impl_attr!(
-    "VI_ATTR_SEND_END_EN specifies whether to assert END during the transfer of the last byte of the buffer."
-    "VI_ATTR_SEND_END_EN is relevant only in viWrite and related operations."
-    "On Serial INSTR sessions, if this attribute is set to VI_FALSE, the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written."
-    "If this attribute is set to VI_TRUE, VISA will perform the behavior described in VI_ATTR_ASRL_END_OUT."
-    "On GPIB, VXI, TCP/IP INSTR, and USB INSTR sessions, if this attribute is set to VI_TRUE, VISA will include the 488.2 defined 'end of message' terminator."
-    SendEndEn(bool)
-);
-
-impl_attr!(
-    "VI_ATTR_TERMCHAR is the termination character. When the termination character is read and VI_ATTR_TERMCHAR_EN is enabled during a read operation, the read operation terminates."
-    "For a Serial INSTR session, VI_ATTR_TERMCHAR is Read/Write when the corresponding session is not enabled to receive VI_EVENT_ASRL_TERMCHAR events."
-    "When the session is enabled to receive VI_EVENT_ASRL_TERMCHAR events, the attribute VI_ATTR_TERMCHAR is Read Only."
-    "For all other session types, the attribute VI_ATTR_TERMCHAR is always Read/Write"
-    TermChar(u8)
-);
-
-impl_attr!(
-    "VI_ATTR_TMO_VALUE specifies the minimum timeout value to use (in milliseconds) when accessing the device associated with the given session."
-    "A timeout value of VI_TMO_IMMEDIATE means that operations should never wait for the device to respond."
-    "A timeout value of VI_TMO_INFINITE disables the timeout mechanism."
-    "Notice that the actual timeout value used by the driver may be higher than the requested one."
-    "The actual timeout value is returned when this attribute is retrieved via viGetAttribute()."
-    TmoValue(u32, std::time::Duration),
-
-    from = |value| {
-        Some(Self(std::time::Duration::from_millis(u64::from(value))))
-    }
-
-    into = |value| {
-        value.as_millis() as bindings::ViAttrState
-    }
-);
-
-/// The type of the interface
-#[allow(missing_docs)]
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum InterfaceType {
-    Gpib = bindings::VI_INTF_GPIB,
-    Vxi = bindings::VI_INTF_VXI,
-    GpibVxi = bindings::VI_INTF_GPIB_VXI,
-    Asrl = bindings::VI_INTF_ASRL,
-    Pxi = bindings::VI_INTF_PXI,
-    Tcpip = bindings::VI_INTF_TCPIP,
-    Usb = bindings::VI_INTF_USB,
-}
-impl_attr!(
-    "VI_ATTR_INTF_TYPE specifies the interface type of the given session."
-    IntfType(u16, InterfaceType),
-    from = |value| {
-        let value = u32::from(value);
-        match value {
-            x if x == bindings::VI_INTF_GPIB => Some(Self(InterfaceType::Gpib)),
-            x if x == bindings::VI_INTF_VXI => Some(Self(InterfaceType::Vxi)),
-            x if x == bindings::VI_INTF_GPIB_VXI => Some(Self(InterfaceType::GpibVxi)),
-            x if x == bindings::VI_INTF_ASRL => Some(Self(InterfaceType::Asrl)),
-            x if x == bindings::VI_INTF_PXI => Some(Self(InterfaceType::Pxi)),
-            x if x == bindings::VI_INTF_TCPIP => Some(Self(InterfaceType::Tcpip)),
-            x if x == bindings::VI_INTF_USB => Some(Self(InterfaceType::Usb)),
-            _ => None,
-        }
-    }
-);
-
-impl_attr!(
-    "VI_ATTR_INTF_NUM specifies the board number for the given interface."
-    IntfNum(ReadOnlyU16)
-);
-
-impl_attr!(
-    "VI_ATTR_GPIB_READDR_EN specifies whether to use repeat addressing before each read or write operation."
-    GpibReaddrEn(bool)
-);
-
-impl_attr!(
-    "VI_ATTR_IO_PROT specifies which protocol to use."
-    "In VXI, you can choose normal word serial or fast data channel (FDC). "
-    "In GPIB, you can choose normal or high-speed (HS-488) transfers."
-    "In serial, TCPIP, or USB RAW, you can choose normal transfers or 488.2-defined strings."
-    "In USB INSTR, you can choose normal or vendor-specific transfers."
-    IoProt(u16)
-);
-
-impl_attr!(
-    "This attribute specifies whether I/O accesses should use DMA (VI_TRUE) or Programmed I/O (VI_FALSE)."
-    "In some implementations, this attribute may have global effects even though it is documented to be a local attribute."
-    "Since this affects performance and not functionality, that behavior is acceptable."
-    DmaAllowEn(bool)
-);
-
-impl_attr!(
-    "VI_ATTR_ASRL_BAUD is the baud rate of the interface."
-    "It is represented as an unsigned 32-bit integer so that any baud rate can be used, but it usually requires a commonly used rate such as: "
-    "300, 1200, 2400, or 9600 baud."
-    AsrlBaud(u32)
-);
-
-impl_attr!(
-    "VI_ATTR_ASRL_DATA_BITS is the number of data bits contained in each frame (from 5 to 8)."
-    "he data bits for each frame are located in the low-order bits of every byte stored in memory."
-    AsrlDataBits(u16)
-);
-
-/// The type of the parity used with every frame transmitted and received.
-#[allow(missing_docs)]
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AsrlParityType {
-    None = bindings::VI_ASRL_PAR_NONE,
-    Odd = bindings::VI_ASRL_PAR_ODD,
-    Even = bindings::VI_ASRL_PAR_EVEN,
-    Mark = bindings::VI_ASRL_PAR_MARK,
-    Space = bindings::VI_ASRL_PAR_SPACE,
-}
-
-impl_attr!(
-    "VI_ATTR_ASRL_PARITY is the parity used with every frame transmitted and received."
-    AsrlParity(u16, AsrlParityType),
-    from = |value| {
-        let value = u32::from(value);
-        match value {
-            x if x == AsrlParityType::None as u32 => Some(Self(AsrlParityType::None)),
-            x if x == AsrlParityType::Odd as u32 => Some(Self(AsrlParityType::Odd)),
-            x if x == AsrlParityType::Even as u32 => Some(Self(AsrlParityType::Even)),
-            x if x == AsrlParityType::Mark as u32 => Some(Self(AsrlParityType::Mark)),
-            x if x == AsrlParityType::Space as u32 => Some(Self(AsrlParityType::Space)),
-            _ => None,
-        }
-    }
-    into = |value| {
-        value as bindings::ViAttrState
-    }
-);
-
-/// The number of stop bits used to indicate the end of a frame.
-#[allow(missing_docs)]
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AsrlStopBitsType {
-    One = bindings::VI_ASRL_STOP_ONE,
-    One5 = bindings::VI_ASRL_STOP_ONE5,
-    Two = bindings::VI_ASRL_STOP_TWO,
-}
-
-impl_attr!(
-    "VI_ATTR_ASRL_STOP_BITS is the number of stop bits used to indicate the end of a frame."
-    "The value VI_ASRL_STOP_ONE5 indicates one-and-one-half (1.5) stop bits."
-    AsrlStopBits(u16, AsrlStopBitsType),
-
-    from = |value| {
-        let value = u32::from(value);
-        match value {
-            x if x == AsrlStopBitsType::One as u32 => Some(Self(AsrlStopBitsType::One)),
-            x if x == AsrlStopBitsType::One5 as u32 => Some(Self(AsrlStopBitsType::One5)),
-            x if x == AsrlStopBitsType::Two as u32 => Some(Self(AsrlStopBitsType::Two)),
-            _ => None,
-        }
-    }
-
-    into = |value| {
-        value as bindings::ViAttrState
-    }
-);
-
-/// The type of flow control used by the transfer mechanism.
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AsrlFlowCntrlType {
-    /// the transfer mechanism does not use flow control, and buffers on both sides of the connection are assumed to be large enough to hold all data transferred.
-    None = bindings::VI_ASRL_FLOW_NONE,
-
-    /// the transfer mechanism uses the XON and XOFF characters to perform flow control.
-    /// The transfer mechanism controls input flow by sending XOFF when the low-level I/O receive buffer is nearly full, and it controls the output flow by suspending transmission when XOFF is received.
-    XonXoff = bindings::VI_ASRL_FLOW_XON_XOFF,
-
-    /// the transfer mechanism uses the RTS output signal and the CTS input signal to perform flow control.
-    /// The transfer mechanism controls input flow by unasserting the RTS signal when the low-level I/O receive buffer is nearly full, and it controls output flow by suspending the transmission when the CTS signal is unasserted.
-    RtsCts = bindings::VI_ASRL_FLOW_RTS_CTS,
-
-    ///the transfer mechanism uses the DTR output signal and the DSR input signal to perform flow control.
-    /// The transfer mechanism controls input flow by unasserting the DTR signal when the low-level I/O receive buffer is nearly full, and it controls output flow by suspending the transmission when the DSR signal is unasserted.
-    DtrDsr = bindings::VI_ASRL_FLOW_DTR_DSR,
-}
-
-impl_attr!(
-    "VI_ATTR_ASRL_FLOW_CNTRL indicates the type of flow control used by the transfer mechanism."
-    AsrlFlowCntrl(u16, AsrlFlowCntrlType),
-
-    from = |value| {
-        let value = u32::from(value);
-        match value {
-            x if x == AsrlFlowCntrlType::None as u32 => Some(Self(AsrlFlowCntrlType::None)),
-            x if x == AsrlFlowCntrlType::XonXoff as u32 => Some(Self(AsrlFlowCntrlType::XonXoff)),
-            x if x == AsrlFlowCntrlType::RtsCts as u32 => Some(Self(AsrlFlowCntrlType::RtsCts)),
-            x if x == AsrlFlowCntrlType::DtrDsr as u32 => Some(Self(AsrlFlowCntrlType::DtrDsr)),
-            _ => None,
-        }
-    }
-
-    into = |value| {
-        value as bindings::ViAttrState
-    }
-);
-
-impl_attr!(
-    "VI_ATTR_RD_BUF_OPER_MODE specifies the operational mode of the formatted I/O read buffer."
-    "When the operational mode is set to VI_FLUSH_DISABLE (default), the buffer is flushed only on explicit calls to viFlush()."
-    "If the operational mode is set to VI_FLUSH_ON_ACCESS, the read buffer is flushed every time a viScanf() (or related) operation completes."
-    RdBufOperMode(u16)
-);
-
-impl_attr!(
-    "This is the current size of the formatted I/O input buffer for this session. The user can modify this value by calling `session::set_read_buffer`"
-    RdBufSize(ReadOnlyU32)
-);
-
-/// The operational mode of the formatted I/O write buffer.
-#[repr(u32)]
-#[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
-pub enum WrBufOperModeType {
-    #[default]
-    /// the buffer is flushed when an END indicator is written to the buffer, or when the buffer fills up.
-    OnAccess = bindings::VI_FLUSH_ON_ACCESS,
-
-    /// the write buffer is flushed under the same conditions, and also every time a `viPrintf()` (or related) operation completes.
-    OnFull = bindings::VI_FLUSH_WHEN_FULL,
-}
-
-impl_attr!(
-    "VI_ATTR_WR_BUF_OPER_MODE specifies the operational mode of the formatted I/O write buffer."
-    WrBufOperMode(u16, WrBufOperModeType),
-
-    from = |value| {
-        let value = u32::from(value);
-        match value {
-            x if x == WrBufOperModeType::OnAccess as u32 => Some(Self(WrBufOperModeType::OnAccess)),
-            x if x == WrBufOperModeType::OnFull as u32 => Some(Self(WrBufOperModeType::OnFull)),
-            _ => None,
-        }
-    }
-
-    into = |value| {
-        value as bindings::ViAttrState
-    }
-);
-
-impl_attr!(
-    "This is the current size of the formatted I/O output buffer for this session. The user can modify this value by calling `session::set_write_buffer`"
-    WrBufSize(ReadOnlyU32)
-);
-/*
-impl_attr!(
-    ""
-    SuppressEndEn()
-);
-
-impl_attr!(
-    ""
-    TermCharEn()
-);
-
-impl_attr!(
-    ""
-    DestAccessPriv()
-);
-
-impl_attr!(
-    ""
-    DestByteOrder()
-);
-
-impl_attr!(
-    ""
-    SrcAccessPriv()
-);
-
-impl_attr!(
-    ""
-    SrcByteOrder()
-);
-
-impl_attr!(
-    ""
-    SrcIncrement()
-);
-
-impl_attr!(
-    ""
-    DestIncrement()
-);
-
-impl_attr!(
-    ""
-    WinAccessPriv()
-);
-
-impl_attr!(
-    ""
-    WinByteOrder()
-);
-
-impl_attr!(
-    ""
-    CmdrLa()
-);
-
-impl_attr!(
-    ""
-    MainframeLa()
-);
-
-impl_attr!(
-    ""
-    ManfName()
-);
-*/
-impl_attr!(
-    "This string attribute is the model name of the device."
-    ModelName(String)
-);
-/*
-impl_attr!(
-    ""
-    AsrlAvailNum()
-);
-
-impl_attr!(
-    ""
-    AsrlCtsState()
-);
-
-impl_attr!(
-    ""
-    AsrlDcdState()
-);
-
-impl_attr!(
-    ""
-    AsrlDsrState()
-);
-
-impl_attr!(
-    ""
-    AsrlDtrState()
-);
-
-impl_attr!(
-    ""
-    AsrlEndIn()
-);
-
-impl_attr!(
-    ""
-    AsrlEndOut()
-);
-
-impl_attr!(
-    ""
-    AsrlReplaceChar()
-);
-
-impl_attr!(
-    ""
-    AsrlRiState()
-);
-
-impl_attr!(
-    ""
-    AsrlRtsState()
-);
-
-impl_attr!(
-    ""
-    AsrlXonChar()
-);
-
-impl_attr!(
-    ""
-    AsrlXoffChar()
-);
-
-impl_attr!(
-    ""
-    WinAccess()
-);
-
-impl_attr!(
-    ""
-    RmSession()
-);
-
-impl_attr!(
-    ""
-    VxiLa()
-);
-
-impl_attr!(
-    ""
-    ManfId()
-);
-
-impl_attr!(
-    ""
-    MemSize32()
-);
-
-impl_attr!(
-    ""
-    MemSpace()
-);
-
-impl_attr!(
-    ""
-    ModelCode()
-);
-
-impl_attr!(
-    ""
-    Slot()
-);
-
-impl_attr!(
-    ""
-    IntfInstName()
-);
-
-impl_attr!(
-    ""
-    ImmediateServ()
-);
-
-impl_attr!(
-    ""
-    IntfParentNum()
-);
-
-impl_attr!(
-    ""
-    RsrcSpecVersion()
-);
-
-impl_attr!(
-    ""
-    RsrcManfName()
-);
-
-impl_attr!(
-    ""
-    RsrcManfId()
-);
-
-impl_attr!(
-    ""
-    TrigId()
-);
-
-*/
-
-impl_attr!(
-    "VI_ATTR_GPIB_PRIMARY_ADDR specifies the primary address of the GPIB device used by the given session."
-    "For the GPIB INTFC Resource, this attribute is Read-Write."
-    "Valid values are 0 to 30."
-    GpibPrimaryAddr(u16)
-);
-
-impl_attr!(
-    "VI_ATTR_GPIB_PRIMARY_ADDR specifies the secondary address of the GPIB device used by the given session."
-    "For the GPIB INTFC Resource, this attribute is Read-Write."
-    "Valid values are 0 to 30, or 0x"
-    GpibSecondaryAddr(u16, Option<u16>),
-
-    from = |value| {
-        const VI_NO_SEC_ADDR: u16 = bindings::VI_NO_SEC_ADDR as u16;
-        match value {
-            0..=30 => Some(Self(Some(value))),
-            VI_NO_SEC_ADDR => Some(Self(None)),
-            _ => None,
-        }
-    }
-
-    into = |value| {
-        let value = value.unwrap_or(bindings::VI_NO_SEC_ADDR as u16);
-        bindings::ViAttrState::from(value)
-    }
-);
-
-impl_attr!(
-    "This attribute shows the current state of the GPIB ATN (ATtentioN) interface line."
-    GpibAtnState(i16, State),
-    from = |value| {
-        let value = value as i16;
-        match value {
-            x if x == State::Asserted as i16 => Some(Self(State::Asserted)),
-            x if x == State::Unasserted as i16 => Some(Self(State::Unasserted)),
-            x if x == State::Unknown as i16 => Some(Self(State::Unknown)),
-            _ => None,
-        }
-    }
-);
-
-/// The type of the GPIB address state
-#[allow(missing_docs)]
-#[repr(i16)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum GpibAddrStateType {
-    Unaddressed = bindings::VI_GPIB_UNADDRESSED as i16,
-    Talker = bindings::VI_GPIB_TALKER as i16,
-    Listener = bindings::VI_GPIB_LISTENER as i16,
-}
-
-impl_attr!(
-    "This attribute shows whether the specified GPIB interface is currently addressed to talk or listen, or is not addressed."
-    GpibAddrState(i16, GpibAddrStateType),
-    from = |value| {
-        let value = value as i16;
-        match value {
-            x if x == GpibAddrStateType::Unaddressed as i16 => Some(Self(GpibAddrStateType::Unaddressed)),
-            x if x == GpibAddrStateType::Talker as i16 => Some(Self(GpibAddrStateType::Talker)),
-            x if x == GpibAddrStateType::Listener as i16 => Some(Self(GpibAddrStateType::Listener)),
-            _ => None,
-        }
-    }
-);
-
-impl_attr!(
-    "This attribute shows whether the specified GPIB interface is currently CIC (Controller In Charge)."
-    GpibCicState(ReadOnlyBool)
-);
-
-impl_attr!(
-    "This attribute shows the current state of the GPIB NDAC (Not Data ACcepted) interface line."
-    GpibNdacState(i16, State),
-    from = |value| {
-        let value = value as i16;
-        match value {
-            x if x == State::Asserted as i16 => Some(Self(State::Asserted)),
-            x if x == State::Unasserted as i16 => Some(Self(State::Unasserted)),
-            x if x == State::Unknown as i16 => Some(Self(State::Unknown)),
-            _ => None,
-        }
-    }
-);
-
-impl_attr!(
-    "This attribute shows the current state of the GPIB SRQ (Service ReQuest) interface line."
-    GpibSrqState(i16, State),
-    from = |value| {
-        let value = value as i16;
-        match value {
-            x if x == State::Asserted as i16 => Some(Self(State::Asserted)),
-            x if x == State::Unasserted as i16 => Some(Self(State::Unasserted)),
-            x if x == State::Unknown as i16 => Some(Self(State::Unknown)),
-            _ => None,
-        }
-    }
-);
-
-impl_attr!(
-    "This attribute shows whether the specified GPIB interface is currently the system controller."
-    "In some implementations, this attribute may be modified only through a configuration utility."
-    "On these systems this attribute is read-only (RO)."
-    GpibSysCntrlState(bool)
-);
-
-/// This attribute specifies the total number of meters of GPIB cable used in the specified GPIB interface.
-/// Valid values are 0 to 15 meters.
-#[allow(missing_docs)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum GpibHs488CableLength {
-    NotImplemented,
-    Disabled,
-    Meters(u8),
-}
-
-impl_attr!(
-    "This attribute specifies the total number of meters of GPIB cable used in the specified GPIB interface."
-    "Valid values are 0 to 15 meters."
-    GpibHs488CblLen(i16, GpibHs488CableLength),
-    from = |value| {
-        let value = value as i16;
-        match value {
-            x if x == bindings::VI_GPIB_HS488_NIMPL as i16 => Some(Self(GpibHs488CableLength::NotImplemented)),
-            x if x == bindings::VI_GPIB_HS488_DISABLED as i16 => Some(Self(GpibHs488CableLength::Disabled)),
-            1..=15 => Some(Self(GpibHs488CableLength::Meters(value as u8))),
-            _ => None,
-        }
-    }
-
-    into = |value| {
-        (match value {
-            GpibHs488CableLength::NotImplemented => bindings::VI_GPIB_HS488_NIMPL as i16,
-            GpibHs488CableLength::Disabled => bindings::VI_GPIB_HS488_DISABLED as i16,
-
-            GpibHs488CableLength::Meters(0) => 1,
-            GpibHs488CableLength::Meters(x) if x > 15 => 15,
-            GpibHs488CableLength::Meters(x) => i16::from(x),
-        }) as bindings::ViAttrState
-    }
-
-);
-
-impl_attr!(
-    "VI_ATTR_GPIB_REN_STATE returns the current state of the GPIB REN (Remote ENable) interface line."
-    GpibRenState(i32, State),
-
-    from = |value| {
-        let value = value as i32;
-        match value {
-            x if x == State::Asserted as i32 => Some(Self(State::Asserted)),
-            x if x == State::Unasserted as i32 => Some(Self(State::Unasserted)),
-            x if x == State::Unknown as i32 => Some(Self(State::Unknown)),
-            _ => None,
-        }
-    }
-);
-
-impl_attr!(
-    "VI_ATTR_GPIB_UNADDR_EN specifies whether to unaddress the device (UNT and UNL) after each read or write operation."
-    GpibUnaddrEn(bool)
-);
-
-impl_attr!(
-    "This attribute specifies the 488-style status byte of the local controller or device associated with this session."
-    "If this attribute is written and bit 6 (40h) is set, this device or controller will assert a service request (SRQ) if it is defined for this interface."
-    DevStatusByte(u8)
-);
-
-impl_attr!(
-    "This attribute specifies whether viReadToFile() will overwrite (truncate) or append when opening a file."
-    FileAppendEn(bool)
-);
-
-impl_attr!(
-    "This attribute shows which VXI trigger lines this implementation supports."
-    "This is a bit vector with bits 0-9 corresponding to VI_TRIG_TTL0 through VI_TRIG_ECL1."
-    VxiTrigSupport(ReadOnlyU32)
-);
-
-impl_attr!(
-    "This attribute shows the current state of the VXI/VME interrupt lines. This is a bit vector with bits 0-6 corresponding to interrupt lines 1-7."
-    VxiVmeIntrStatus(ReadOnlyU16)
-);
-
-/// VXI device class type
-#[allow(missing_docs)]
-#[repr(u16)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum VxiDevClassType {
-    Memory = bindings::VI_VXI_CLASS_MEMORY as u16,
-    Extended = bindings::VI_VXI_CLASS_EXTENDED as u16,
-    Message = bindings::VI_VXI_CLASS_MESSAGE as u16,
-    Register = bindings::VI_VXI_CLASS_REGISTER as u16,
-    Other = bindings::VI_VXI_CLASS_OTHER as u16,
-}
-
-impl_attr!(
-    "This attribute represents the VXI-defined device class to which the resource belongs, either:"
-    "message based (VI_VXI_CLASS_MESSAGE),"
-    "register based (VI_VXI_CLASS_REGISTER),"
-    "extended (VI_VXI_CLASS_EXTENDED),"
-    "or memory (VI_VXI_CLASS_MEMORY)."
-    "VME devices are usually either register based or belong to a miscellaneous class (VI_VXI_CLASS_OTHER)."
-    VxiDevClass(u16, VxiDevClassType),
-
-    from = |value| {
-        let value = value as u16;
-        match value {
-            x if x == VxiDevClassType::Memory as u16 => Some(Self(VxiDevClassType::Memory)),
-            x if x == VxiDevClassType::Extended as u16 => Some(Self(VxiDevClassType::Extended)),
-            x if x == VxiDevClassType::Message as u16 => Some(Self(VxiDevClassType::Message)),
-            x if x == VxiDevClassType::Register as u16 => Some(Self(VxiDevClassType::Register)),
-            x if x == VxiDevClassType::Other as u16 => Some(Self(VxiDevClassType::Other)),
-            _ => None,
-        }
-    }
-);
-
-impl_attr!(
-    "This attribute shows which VXI trigger lines this implementation supports.
-    This is a bit vector with bits 0-9 corresponding to VI_TRIG_TTL0 through VI_TRIG_ECL1."
-    VxiTrigStatus(ReadOnlyU32)
-);
-
-impl_attr!(
-    "This attribute shows the current state of the VXI/VME SYSFAIL (SYStem FAILure) backplane line."
-    VxiVmeSysfailState(i16, State),
-
-    from = |value| {
-        let value = value as i16;
-        match value {
-            x if x == State::Asserted as i16 => Some(Self(State::Asserted)),
-            x if x == State::Unasserted as i16 => Some(Self(State::Unasserted)),
-            x if x == State::Unknown as i16 => Some(Self(State::Unknown)),
-            _ => None,
-        }
-    }
-);
-
-/*
-impl_attr!(
-    ""
-    TcpipAddr()
-);
-
-impl_attr!(
-    ""
-    TcpipHostname()
-);
-
-impl_attr!(
-    ""
-    TcpipPort()
-);
-
-impl_attr!(
-    ""
-    TcpipDeviceName()
-);
-
-impl_attr!(
-    ""
-    TcpipNodelay()
-);
-
-impl_attr!(
-    ""
-    TcpipKeepalive()
-);
-
-*/
-
-impl_attr!(
-    "VI_ATTR_4882_COMPLIANT specifies whether the device is 488.2 compliant."
-    Is4882Compliant(bool)
-);
-
-/*
-
-impl_attr!(
-    ""
-    UsbSerialNum()
-);
-
-impl_attr!(
-    ""
-    UsbIntfcNum()
-);
-
-impl_attr!(
-    ""
-    UsbProtocol()
-);
-
-impl_attr!(
-    ""
-    UsbMaxIntrSize()
-);
-
-impl_attr!(
-    ""
-    PxiDevNum()
-);
-
-impl_attr!(
-    ""
-    PxiFuncNum()
-);
-
-impl_attr!(
-    ""
-    PxiBusNum()
-);
-
-impl_attr!(
-    ""
-    PxiChassis()
-);
-
-impl_attr!(
-    ""
-    PxiSlotpath()
-);
-
-impl_attr!(
-    ""
-    PxiSlotLbusLeft()
-);
-
-impl_attr!(
-    ""
-    PxiSlotLbusRight()
-);
-
-impl_attr!(
-    ""
-    PxiTrigBus()
-);
-
-impl_attr!(
-    ""
-    PxiStarTrigBus()
-);
-
-impl_attr!(
-    ""
-    PxiStarTrigLine()
-);
-
-impl_attr!(
-    ""
-    PxiSrcTrigBus()
-);
-
-impl_attr!(
-    ""
-    PxiDestTrigBus()
-);
-
-impl_attr!(
-    ""
-    PxiIsExpress()
-);
-
-impl_attr!(
-    ""
-    PxiSlotLwidth()
-);
-
-impl_attr!(
-    ""
-    PxiMaxLwidth()
-);
-
-impl_attr!(
-    ""
-    PxiActualLwidth()
-);
-
-impl_attr!(
-    ""
-    PxiDstarBus()
-);
-
-impl_attr!(
-    ""
-    PxiDstarSet()
-);
-
-impl_attr!(
-    ""
-    PxiAllowWriteCombine()
-);
-
-impl_attr!(
-    ""
-    TcpipHislipOverlapEn()
-);
-
-impl_attr!(
-    ""
-    TcpipHislipVersion()
-);
-
-impl_attr!(
-    ""
-    TcpipHislipMaxMessageKb()
-);
-
-impl_attr!(
-    ""
-    TcpipIsHislip()
-);
-
-impl_attr!(
-    ""
-    JobId()
-);
-
-impl_attr!(
-    ""
-    EventType()
-);
-
-impl_attr!(
-    ""
-    SigpStatusId()
-);
-
-impl_attr!(
-    ""
-    RecvTrigId()
-);
-
-impl_attr!(
-    ""
-    IntrStatusId()
-);
-
-impl_attr!(
-    ""
-    RetCount32()
-);
-
-impl_attr!(
-    ""
-    RecvIntrLevel()
-);
-
-impl_attr!(
-    ""
-    OperName()
-);
-
-impl_attr!(
-    ""
-    GpibRecvCicState()
-);
-
-impl_attr!(
-    ""
-    RecvTcpipAddr()
-);
-
-impl_attr!(
-    ""
-    UsbRecvIntrSize()
-);
-
-impl_attr!(
-    ""
-    UsbRecvIntrData()
-);
-
-impl_attr!(
-    ""
-    PxiRecvIntrSeq()
-);
-
-impl_attr!(
-    ""
-    PxiRecvIntrData()
-);
-
-impl_attr!(
-    ""
-    UserData()
-);
-
-impl_attr!(
-    ""
-    RetCount()
-);
-
-impl_attr!(
-    ""
-    WinBaseAddr()
-);
-
-impl_attr!(
-    ""
-    WinSize()
-);
-
- */
-
-impl_attr!(
-    "VI_ATTR_MEM_BASE, VI_ATTR_MEM_BASE_32, and VI_ATTR_MEM_BASE_64 specify the base address of the device in VXIbus memory address space."
-    "This base address is applicable to A24 or A32 address space."
-    "If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE, the value of this attribute is meaningless for the given VXI device."
-    MemBase(bindings::ViBusAddress, bindings::ViBusAddress),
-    from = |value| {
-        Some(Self(value))
-    }
-);
-
-impl_attr!(
-    "VI_ATTR_MEM_SIZE, VI_ATTR_MEM_SIZE_32, and VI_ATTR_MEM_SIZE_64 specify the size of memory requested by the device in VXIbus address space."
-    "If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE, the value of this attribute is meaningless for the given VXI device."
-    MemSize(bindings::ViBusSize, bindings::ViBusSize),
-    from = |value| {
-        Some(Self(value))
-    }
-);
-
-impl_attr!(
-    "Memory type used by the device in the specified BAR (if applicable)."
-    PxiMemTypeBar0(u16)
-);
-
-impl_attr!(
-    "Memory type used by the device in the specified BAR (if applicable)."
-    PxiMemTypeBar1(u16)
-);
-
-impl_attr!(
-    "Memory type used by the device in the specified BAR (if applicable)."
-    PxiMemTypeBar2(u16)
-);
-
-impl_attr!(
-    "Memory type used by the device in the specified BAR (if applicable)."
-    PxiMemTypeBar3(u16)
-);
-
-impl_attr!(
-    "Memory type used by the device in the specified BAR (if applicable)."
-    PxiMemTypeBar4(u16)
-);
-
-impl_attr!(
-    "Memory type used by the device in the specified BAR (if applicable)."
-    PxiMemTypeBar5(u16)
-);
-
-impl_attr!(
-    "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemBaseBar0(ReadOnlyU32)
-);
-
-impl_attr!(
-    "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemBaseBar1(ReadOnlyU32)
-);
-
-impl_attr!(
-    "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemBaseBar2(ReadOnlyU32)
-);
-
-impl_attr!(
-    "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemBaseBar3(ReadOnlyU32)
-);
-
-impl_attr!(
-    "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemBaseBar4(ReadOnlyU32)
-);
-
-impl_attr!(
-    "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemBaseBar5(ReadOnlyU32)
-);
-
-impl_attr!(
-    "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemSizeBar0(ReadOnlyU32)
-);
-
-impl_attr!(
-    "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemSizeBar1(ReadOnlyU32)
-);
-
-impl_attr!(
-    "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemSizeBar2(ReadOnlyU32)
-);
-
-impl_attr!(
-    "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemSizeBar3(ReadOnlyU32)
-);
-
-impl_attr!(
-    "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemSizeBar4(ReadOnlyU32)
-);
-
-impl_attr!(
-    "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
-    PxiMemSizeBar5(ReadOnlyU32)
-);
+#[macro_use]
+mod traits;
+pub use traits::*;
+
+pub mod asrl;
+pub mod gpib;
+pub mod misc;
+pub mod pxi;
+pub mod rsrc;
+pub mod tcpip;
+pub mod usb;
+pub mod vxi;
 
 /// A string attribute value that cannot be modified.
 pub type ReadOnlyString = String;
@@ -1438,6 +45,16 @@ pub type ReadOnlyU32 = u32;
 
 /// A 16-bit signed integer attribute value that cannot be modified.
 pub type ReadOnlyI16 = i16;
+
+/// Attribute states
+#[allow(missing_docs)]
+#[repr(i32)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum State {
+    Asserted = bindings::VI_STATE_ASSERTED as i32,
+    Unasserted = bindings::VI_STATE_UNASSERTED as i32,
+    Unknown = bindings::VI_STATE_UNKNOWN,
+}
 
 #[repr(u32)]
 #[allow(missing_docs)]
@@ -1600,22 +217,181 @@ pub enum AttributeType {
     PxiMemSizeBar5 = bindings::VI_ATTR_PXI_MEM_SIZE_BAR5,
 }
 
-/// Access modes for opening a session
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum AccessMode {
-    /// Used to acquire an exclusive lock immediately upon opening a session.
-    /// If a lock cannot be acquired, the session is closed and an error is returned
-    ExclusiveLock = bindings::VI_EXCLUSIVE_LOCK,
+#[cfg(test)]
+mod test {
+    use super::*;
 
-    /// Used to acquire a lock on the resource when the session is opened
-    /// Not valid for session opening
-    SharedLock = bindings::VI_SHARED_LOCK,
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn test_all_attributes_available() {
+        let attr: AttributeType = AttributeType::RsrcClass;
+        match attr {
+            AttributeType::RsrcClass => rsrc::RsrcClass::attribute_type(),
+            AttributeType::RsrcName => rsrc::RsrcName::attribute_type(),
+            AttributeType::RsrcImplVersion => rsrc::RsrcImplVersion::attribute_type(),
+            AttributeType::RsrcLockState => rsrc::RsrcLockState::attribute_type(),
+            AttributeType::RsrcSpecVersion => rsrc::RsrcSpecVersion::attribute_type(),
+            AttributeType::RsrcManfName => rsrc::RsrcManfName::attribute_type(),
+            AttributeType::RsrcManfId => rsrc::RsrcManfId::attribute_type(),
 
-    /// Uses VISA supplied default values for the session
-    NoLock = bindings::VI_NO_LOCK,
+            AttributeType::AsrlAvailNum => asrl::AsrlAvailNum::attribute_type(),
+            AttributeType::AsrlBaud => asrl::AsrlBaud::attribute_type(),
+            AttributeType::AsrlDataBits => asrl::AsrlDataBits::attribute_type(),
+            AttributeType::AsrlParity => asrl::AsrlParity::attribute_type(),
+            AttributeType::AsrlStopBits => asrl::AsrlStopBits::attribute_type(),
+            AttributeType::AsrlFlowCntrl => asrl::AsrlFlowCntrl::attribute_type(),
+            AttributeType::AsrlCtsState => asrl::AsrlCtsState::attribute_type(),
+            AttributeType::AsrlDcdState => asrl::AsrlDcdState::attribute_type(),
+            AttributeType::AsrlDsrState => asrl::AsrlDsrState::attribute_type(),
+            AttributeType::AsrlDtrState => asrl::AsrlDtrState::attribute_type(),
+            AttributeType::AsrlEndIn => asrl::AsrlEndIn::attribute_type(),
+            AttributeType::AsrlEndOut => asrl::AsrlEndOut::attribute_type(),
+            AttributeType::AsrlReplaceChar => asrl::AsrlReplaceChar::attribute_type(),
+            AttributeType::AsrlRiState => asrl::AsrlRiState::attribute_type(),
+            AttributeType::AsrlRtsState => asrl::AsrlRtsState::attribute_type(),
+            AttributeType::AsrlXonChar => asrl::AsrlXonChar::attribute_type(),
+            AttributeType::AsrlXoffChar => asrl::AsrlXoffChar::attribute_type(),
 
-    /// Used to configure attributes to values specified by some external configuration utility
-    /// NI-VISA currently supports `VI_LOAD_CONFIG` only on Serial INSTR sessions
-    LoadConfig = bindings::VI_LOAD_CONFIG,
+            AttributeType::TcpipAddr => tcpip::TcpipAddr::attribute_type(),
+            AttributeType::TcpipHostname => tcpip::TcpipHostname::attribute_type(),
+            AttributeType::TcpipPort => tcpip::TcpipPort::attribute_type(),
+            AttributeType::TcpipDeviceName => tcpip::TcpipDeviceName::attribute_type(),
+            AttributeType::TcpipNodelay => tcpip::TcpipNodelay::attribute_type(),
+            AttributeType::TcpipKeepalive => tcpip::TcpipKeepalive::attribute_type(),
+            AttributeType::TcpipHislipOverlapEn => tcpip::TcpipHislipOverlapEn::attribute_type(),
+            AttributeType::TcpipHislipVersion => tcpip::TcpipHislipVersion::attribute_type(),
+            AttributeType::TcpipHislipMaxMessageKb => {
+                tcpip::TcpipHislipMaxMessageKb::attribute_type()
+            }
+            AttributeType::TcpipIsHislip => tcpip::TcpipIsHislip::attribute_type(),
+
+            AttributeType::GpibAtnState => gpib::GpibAtnState::attribute_type(),
+            AttributeType::GpibAddrState => gpib::GpibAddrState::attribute_type(),
+            AttributeType::GpibCicState => gpib::GpibCicState::attribute_type(),
+            AttributeType::GpibNdacState => gpib::GpibNdacState::attribute_type(),
+            AttributeType::GpibSrqState => gpib::GpibSrqState::attribute_type(),
+            AttributeType::GpibSysCntrlState => gpib::GpibSysCntrlState::attribute_type(),
+            AttributeType::GpibHs488CblLen => gpib::GpibHs488CblLen::attribute_type(),
+            AttributeType::GpibPrimaryAddr => gpib::GpibPrimaryAddr::attribute_type(),
+            AttributeType::GpibSecondaryAddr => gpib::GpibSecondaryAddr::attribute_type(),
+            AttributeType::GpibRecvCicState => gpib::GpibRecvCicState::attribute_type(),
+            AttributeType::GpibRenState => gpib::GpibRenState::attribute_type(),
+            AttributeType::GpibUnaddrEn => gpib::GpibUnaddrEn::attribute_type(),
+            AttributeType::GpibReaddrEn => gpib::GpibReaddrEn::attribute_type(),
+
+            AttributeType::VxiDevClass => vxi::VxiDevClass::attribute_type(),
+            AttributeType::VxiVmeIntrStatus => vxi::VxiVmeIntrStatus::attribute_type(),
+            AttributeType::VxiTrigStatus => vxi::VxiTrigStatus::attribute_type(),
+            AttributeType::VxiVmeSysfailState => vxi::VxiVmeSysfailState::attribute_type(),
+            AttributeType::VxiLa => vxi::VxiLa::attribute_type(),
+            AttributeType::VxiTrigSupport => vxi::VxiTrigSupport::attribute_type(),
+
+            AttributeType::PxiDevNum => pxi::PxiDevNum::attribute_type(),
+            AttributeType::PxiFuncNum => pxi::PxiFuncNum::attribute_type(),
+            AttributeType::PxiBusNum => pxi::PxiBusNum::attribute_type(),
+            AttributeType::PxiChassis => pxi::PxiChassis::attribute_type(),
+            AttributeType::PxiSlotpath => pxi::PxiSlotpath::attribute_type(),
+            AttributeType::PxiSlotLbusLeft => pxi::PxiSlotLbusLeft::attribute_type(),
+            AttributeType::PxiSlotLbusRight => pxi::PxiSlotLbusRight::attribute_type(),
+            AttributeType::PxiMemTypeBar0 => pxi::PxiMemTypeBar0::attribute_type(),
+            AttributeType::PxiMemTypeBar1 => pxi::PxiMemTypeBar1::attribute_type(),
+            AttributeType::PxiMemTypeBar2 => pxi::PxiMemTypeBar2::attribute_type(),
+            AttributeType::PxiMemTypeBar3 => pxi::PxiMemTypeBar3::attribute_type(),
+            AttributeType::PxiMemTypeBar4 => pxi::PxiMemTypeBar4::attribute_type(),
+            AttributeType::PxiMemTypeBar5 => pxi::PxiMemTypeBar5::attribute_type(),
+            AttributeType::PxiMemBaseBar0 => pxi::PxiMemBaseBar0::attribute_type(),
+            AttributeType::PxiMemBaseBar1 => pxi::PxiMemBaseBar1::attribute_type(),
+            AttributeType::PxiMemBaseBar2 => pxi::PxiMemBaseBar2::attribute_type(),
+            AttributeType::PxiMemBaseBar3 => pxi::PxiMemBaseBar3::attribute_type(),
+            AttributeType::PxiMemBaseBar4 => pxi::PxiMemBaseBar4::attribute_type(),
+            AttributeType::PxiMemBaseBar5 => pxi::PxiMemBaseBar5::attribute_type(),
+            AttributeType::PxiMemSizeBar0 => pxi::PxiMemSizeBar0::attribute_type(),
+            AttributeType::PxiMemSizeBar1 => pxi::PxiMemSizeBar1::attribute_type(),
+            AttributeType::PxiMemSizeBar2 => pxi::PxiMemSizeBar2::attribute_type(),
+            AttributeType::PxiMemSizeBar3 => pxi::PxiMemSizeBar3::attribute_type(),
+            AttributeType::PxiMemSizeBar4 => pxi::PxiMemSizeBar4::attribute_type(),
+            AttributeType::PxiMemSizeBar5 => pxi::PxiMemSizeBar5::attribute_type(),
+
+            AttributeType::PxiIsExpress => todo!(), //pxi::PxiIsExpress::attribute_type(),
+            AttributeType::PxiSlotLwidth => todo!(), //pxi::PxiSlotLwidth::attribute_type(),
+            AttributeType::PxiMaxLwidth => todo!(), //pxi::PxiMaxLwidth::attribute_type(),
+            AttributeType::PxiActualLwidth => todo!(), //pxi::PxiActualLwidth::attribute_type(),
+            AttributeType::PxiDstarBus => todo!(),  //pxi::PxiDstarBus::attribute_type(),
+            AttributeType::PxiDstarSet => todo!(),  //pxi::PxiDstarSet::attribute_type(),
+            AttributeType::PxiAllowWriteCombine => todo!(), //pxi::PxiAllowWriteCombine::attribute_type(),
+            AttributeType::PxiRecvIntrSeq => todo!(),       //pxi::PxiRecvIntrSeq::attribute_type(),
+            AttributeType::PxiRecvIntrData => todo!(), //pxi::PxiRecvIntrData::attribute_type(),
+            AttributeType::PxiTrigBus => todo!(),      //pxi::PxiTrigBus::attribute_type(),
+            AttributeType::PxiStarTrigBus => todo!(),  //pxi::PxiStarTrigBus::attribute_type(),
+            AttributeType::PxiStarTrigLine => todo!(), //pxi::PxiStarTrigLine::attribute_type(),
+            AttributeType::PxiSrcTrigBus => todo!(),   //pxi::PxiSrcTrigBus::attribute_type(),
+            AttributeType::PxiDestTrigBus => todo!(),  //pxi::PxiDestTrigBus::attribute_type(),
+
+            AttributeType::UsbSerialNum => usb::UsbSerialNum::attribute_type(),
+            AttributeType::UsbIntfcNum => usb::UsbIntfcNum::attribute_type(),
+            AttributeType::UsbProtocol => usb::UsbProtocol::attribute_type(),
+            AttributeType::UsbMaxIntrSize => usb::UsbMaxIntrSize::attribute_type(),
+            AttributeType::UsbRecvIntrSize => usb::UsbRecvIntrSize::attribute_type(),
+            AttributeType::UsbRecvIntrData => usb::UsbRecvIntrData::<0>::attribute_type(),
+
+            AttributeType::DevStatusByte => misc::DevStatusByte::attribute_type(),
+            AttributeType::MemBase => misc::MemBase::attribute_type(),
+            AttributeType::MemSize => misc::MemSize::attribute_type(),
+            AttributeType::MaxQueueLength => misc::MaxQueueLength::attribute_type(),
+            AttributeType::FdcChnl => misc::FdcChnl::attribute_type(),
+            AttributeType::FdcMode => misc::FdcMode::attribute_type(),
+            AttributeType::FdcGenSignalEn => misc::FdcGenSignalEn::attribute_type(),
+            AttributeType::FdcUsePair => misc::FdcUsePair::attribute_type(),
+            AttributeType::SendEndEn => misc::SendEndEn::attribute_type(),
+            AttributeType::TermChar => misc::TermChar::attribute_type(),
+            AttributeType::TmoValue => misc::TmoValue::attribute_type(),
+            AttributeType::IoProt => misc::IoProt::attribute_type(),
+            AttributeType::DmaAllowEn => misc::DmaAllowEn::attribute_type(),
+            AttributeType::RdBufOperMode => misc::RdBufOperMode::attribute_type(),
+            AttributeType::RdBufSize => misc::RdBufSize::attribute_type(),
+            AttributeType::WrBufOperMode => misc::WrBufOperMode::attribute_type(),
+            AttributeType::WrBufSize => misc::WrBufSize::attribute_type(),
+            AttributeType::SuppressEndEn => misc::SuppressEndEn::attribute_type(),
+            AttributeType::TermCharEn => misc::TermCharEn::attribute_type(),
+            AttributeType::DestAccessPriv => misc::DestAccessPriv::attribute_type(),
+            AttributeType::DestByteOrder => misc::DestByteOrder::attribute_type(),
+            AttributeType::SrcAccessPriv => misc::SrcAccessPriv::attribute_type(),
+            AttributeType::SrcByteOrder => misc::SrcByteOrder::attribute_type(),
+            AttributeType::SrcIncrement => misc::SrcIncrement::attribute_type(),
+            AttributeType::DestIncrement => misc::DestIncrement::attribute_type(),
+            AttributeType::WinAccessPriv => misc::WinAccessPriv::attribute_type(),
+            AttributeType::WinByteOrder => misc::WinByteOrder::attribute_type(),
+            AttributeType::CmdrLa => misc::CmdrLa::attribute_type(),
+            AttributeType::MainframeLa => misc::MainframeLa::attribute_type(),
+            AttributeType::ManfName => misc::ManfName::attribute_type(),
+            AttributeType::ModelName => misc::ModelName::attribute_type(),
+            AttributeType::IntfType => misc::IntfType::attribute_type(),
+            AttributeType::IntfNum => misc::IntfNum::attribute_type(),
+            AttributeType::FileAppendEn => misc::FileAppendEn::attribute_type(),
+
+            AttributeType::JobId => todo!(), //misc::JobId::attribute_type(),
+            AttributeType::EventType => todo!(), //misc::EventType::attribute_type(),
+            AttributeType::SigpStatusId => todo!(), //misc::SigpStatusId::attribute_type(),
+            AttributeType::RecvTrigId => todo!(), //misc::RecvTrigId::attribute_type(),
+            AttributeType::IntrStatusId => todo!(), //misc::IntrStatusId::attribute_type(),
+            AttributeType::RecvIntrLevel => todo!(), //misc::RecvIntrLevel::attribute_type(),
+            AttributeType::OperName => todo!(), //misc::OperName::attribute_type(),
+            AttributeType::RecvTcpipAddr => todo!(), //misc::RecvTcpipAddr::attribute_type(),
+            AttributeType::UserData => todo!(), //misc::UserData::attribute_type(),
+            AttributeType::RetCount => todo!(), //misc::RetCount::attribute_type(),
+            AttributeType::WinBaseAddr => todo!(), //misc::WinBaseAddr::attribute_type(),
+            AttributeType::WinSize => todo!(), //misc::WinSize::attribute_type(),
+            AttributeType::Is4882Compliant => todo!(), //misc::Is4882Compliant::attribute_type(),
+            AttributeType::TrigId => todo!(), //misc::TrigId::attribute_type(),
+            AttributeType::WinAccess => todo!(), //misc::WinAccess::attribute_type(),
+            AttributeType::RmSession => todo!(), //misc::RmSession::attribute_type(),
+            AttributeType::ManfId => todo!(), //misc::ManfId::attribute_type(),
+            AttributeType::MemSpace => todo!(), //misc::MemSpace::attribute_type(),
+            AttributeType::ModelCode => todo!(), //misc::ModelCode::attribute_type(),
+            AttributeType::Slot => todo!(),  //misc::Slot::attribute_type(),
+            AttributeType::IntfInstName => todo!(), //misc::IntfInstName::attribute_type(),
+            AttributeType::ImmediateServ => todo!(), //misc::ImmediateServ::attribute_type(),
+            AttributeType::IntfParentNum => todo!(), //misc::IntfParentNum::attribute_type(),
+        };
+    }
 }
