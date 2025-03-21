@@ -2,6 +2,9 @@
 This crate provides a safe wrapper around the NIST VISA library.  
 It is designed to be as simple to use as possible.
 
+To build, you will need the VISA_DIR environment variable set to the location of the VISA library.
+For example `C:\\Program Files\\IVI Foundation\\VISA\\Win64`
+
 ## Examples
 
 Here is a simple example that searches for available local devices:
