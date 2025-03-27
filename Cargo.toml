@@ -1,11 +1,16 @@
 [package]
 name = "libvisa"
 description = "Bindings to the VISA library"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 license = "MIT"
 repository = "https://github.com/caliangroup/libvisa"
 readme = "README.md"
 
+[features]
+default = []
+bindgen = ["dep:bindgen"]
+
 [dependencies]
+bindgen = { version = "0.71.1", optional = true }

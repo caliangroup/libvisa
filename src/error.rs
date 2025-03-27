@@ -24,7 +24,21 @@ pub struct Error {
     pub description: Option<String>,
 }
 impl Error {
-    const ERROR_OK: i32 = bindings::VI_SUCCESS as i32;
+    const ERROR_OK: &[i32] = &[
+        bindings::VI_SUCCESS as i32,
+        bindings::VI_SUCCESS_EVENT_EN as i32,
+        bindings::VI_SUCCESS_EVENT_DIS as i32,
+        bindings::VI_SUCCESS_QUEUE_EMPTY as i32,
+        bindings::VI_SUCCESS_TERM_CHAR as i32,
+        bindings::VI_SUCCESS_MAX_CNT as i32,
+        bindings::VI_SUCCESS_DEV_NPRESENT as i32,
+        bindings::VI_SUCCESS_TRIG_MAPPED as i32,
+        bindings::VI_SUCCESS_QUEUE_NEMPTY as i32,
+        bindings::VI_SUCCESS_NCHAIN as i32,
+        bindings::VI_SUCCESS_NESTED_SHARED as i32,
+        bindings::VI_SUCCESS_NESTED_EXCLUSIVE as i32,
+        bindings::VI_SUCCESS_SYNC as i32,
+    ];
     const MAX_DESC_LENGTH: usize = 1024;
 
     /// Create an error from a status code returned by the VISA library.
@@ -32,7 +46,7 @@ impl Error {
     /// If a session is provided, the error description will be fetched from the session.
     #[must_use]
     pub fn new(raw_status: i32, session: Option<bindings::ViSession>) -> Self {
-        if raw_status == Self::ERROR_OK {
+        if Self::ERROR_OK.contains(&raw_status) {
             return Self::default();
         }
 
@@ -44,9 +58,17 @@ impl Error {
                     bindings::viStatusDesc(session, raw_status, buffer.as_mut_slice().as_mut_ptr())
                 };
 
-                let description = (status == Self::ERROR_OK).then(|| {
+                let description = Self::ERROR_OK.contains(&status).then(|| {
                     // Transform into a u8 buffer
                     let buffer: Vec<u8> = buffer.iter().map(|&x| x as u8).collect();
+
+                    // Get a slice including only a single \0
+                    let mut buffer = buffer
+                        .iter()
+                        .take_while(|&&x| x != 0)
+                        .copied()
+                        .collect::<Vec<u8>>();
+                    buffer.push(0);
 
                     // Into string
                     CString::from_vec_with_nul(buffer)
@@ -85,7 +107,7 @@ impl Error {
         F: FnOnce() -> i32,
     {
         let status = f();
-        if status == Self::ERROR_OK {
+        if Self::ERROR_OK.contains(&status) {
             Ok(())
         } else {
             Err(Self::new(status, session))

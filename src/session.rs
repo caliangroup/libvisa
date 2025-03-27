@@ -12,8 +12,9 @@ use crate::{
 };
 use std::{
     future,
+    io::Read,
     path::Path,
-    sync::{Mutex, OnceLock},
+    sync::{Arc, Mutex, OnceLock},
     vec,
 };
 
@@ -52,9 +53,10 @@ pub struct SessionOptions {
 }
 
 /// A session to a resource
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Session {
     vi: bindings::ViSession,
+    io_lock: Arc<Mutex<()>>,
 }
 impl Session {
     /// Open a session to a resource
@@ -85,13 +87,33 @@ impl Session {
             bindings::viOpen(rm.session_id(), name.as_ptr(), mode, open_timeout, &mut vi)
         })?;
 
-        Ok(Self { vi })
+        let io_lock = Arc::new(Mutex::new(()));
+        Ok(Self { vi, io_lock })
     }
 
     /// Get the raw session identifier
     #[must_use]
     pub fn session_id(&self) -> bindings::ViSession {
         self.vi
+    }
+
+    /// Run a function with exclusive access to the session
+    ///
+    /// # Panics
+    /// Panics if the lock cannot be acquired
+    pub fn with_lock<T>(&self, f: impl FnOnce(&Self) -> T) -> T {
+        let _lock = self.io_lock.lock().unwrap();
+        f(self)
+    }
+
+    /// Run a function with exclusive access to the session
+    ///
+    /// # Panics
+    /// Panics if the lock cannot be acquired
+    pub fn with_lock_mut<T>(&mut self, f: impl FnOnce(&mut Self) -> T) -> T {
+        let lock = self.io_lock.clone();
+        let _lock = lock.lock().unwrap();
+        f(self)
     }
 
     /// Get the resource identifier
@@ -102,25 +124,24 @@ impl Session {
         self.query("*IDN?")
     }
 
-    /// Get a writer for the session
-    #[must_use]
-    pub fn writer(&self) -> std::io::BufWriter<Self> {
-        std::io::BufWriter::new(*self)
-    }
-
-    /// Get a reader for the session
-    #[must_use]
-    pub fn reader(&self) -> std::io::BufReader<Self> {
-        std::io::BufReader::new(*self)
-    }
-
     /// Reads the entire available data from the session into a string
     ///
     /// # Errors
     /// Will return an error if the data cannot be read
     pub fn read_string(&mut self) -> Result<String, Error> {
-        let mut buf = String::new();
-        <Self as std::io::Read>::read_to_string(self, &mut buf)?;
+        let mut buf = vec![];
+        let mut chunk = [0u8; 8192];
+        let reader = <Self as std::io::Read>::by_ref(self);
+        loop {
+            let len = reader.read(&mut chunk)?;
+            buf.extend(&chunk[..len]);
+
+            if len < 8192 {
+                break;
+            }
+        }
+
+        let buf = String::from_utf8(buf).map_err(|_| Error::from_msg("Invalid UTF-8"))?;
         Ok(buf)
     }
 
@@ -129,7 +150,9 @@ impl Session {
     /// # Errors
     /// Will return an error if the data cannot be written
     pub fn write_string(&mut self, buf: &str) -> Result<(), Error> {
-        <Self as std::io::Write>::write(self, buf.as_bytes())?;
+        let with_terminator = format!("{buf}\n");
+
+        <Self as std::io::Write>::write(self, with_terminator.as_bytes())?;
         Ok(())
     }
 
@@ -782,11 +805,11 @@ impl Session {
 
 impl std::io::Read for Session {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        let max_bytes = buf.len();
+        std::thread::sleep(std::time::Duration::from_millis(500));
 
         let mut bytes_read = 0;
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viRead(self.vi, buf.as_mut_ptr(), max_bytes as u32, &mut bytes_read)
+            bindings::viRead(self.vi, buf.as_mut_ptr(), buf.len() as u32, &mut bytes_read)
         })
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 
@@ -796,6 +819,8 @@ impl std::io::Read for Session {
 
 impl std::io::Write for Session {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+
         let mut bytes_written = 0;
         Error::wrap_binding(Some(self.vi), || unsafe {
             bindings::viWrite(self.vi, buf.as_ptr(), buf.len() as u32, &mut bytes_written)
@@ -913,7 +938,7 @@ impl Drop for AsyncTask {
 /// **IMPORTANT** %s expects null terminated c-strings!
 #[macro_export]
 macro_rules! printf {
-    ($session:expr, $format:expr, $($arg:expr),* $(,)?) => {
+    ($session:expr, $format:expr $(, $($arg:expr),*)? $(,)?) => {
         {
             let session: &$crate::Session = $session;
             let format: &str = $format;
@@ -959,16 +984,45 @@ macro_rules! scanf {
 
 #[cfg(test)]
 mod test {
-    use super::*;
+    use crate::{
+        attribute::{misc::TmoValue, usb::UsbSerialNum, AsViReadable, AsViWritable},
+        get_local_device,
+    };
+    use std::time::Duration;
 
     #[test]
     fn test_macros() {
-        let rm = ResourceManager::new().unwrap();
-        let session = Session::new(&rm, "GPIB0::1::INSTR", SessionOptions::default()).unwrap();
+        let mut session = get_local_device();
+        session.with_lock_mut(|session| {
+            printf!(&session, "*IDN?\n").unwrap();
+            let mut id = Vec::<u8>::with_capacity(8192);
+            scanf!(&session, "%s", id).unwrap();
+        });
+    }
 
-        printf!(&session, "Hello, World! %d %d", 5, 6).unwrap();
+    #[test]
+    fn test_idn() {
+        let mut session = get_local_device();
+        session.with_lock_mut(|session| {
+            let session = session.idn().unwrap();
+            assert!(!session.is_empty());
+        });
+    }
 
-        let mut id = 0;
-        scanf!(&session, "%d", id).unwrap();
+    #[test]
+    fn test_read_attr() {
+        let session = get_local_device();
+        session.with_lock(|session| {
+            let serial = UsbSerialNum::read(session).unwrap();
+            assert!(!serial.is_empty());
+        });
+    }
+
+    #[test]
+    fn test_write_attr() {
+        let mut session = get_local_device();
+        session.with_lock_mut(|session| {
+            TmoValue::write(session, Duration::from_secs(2)).unwrap();
+        });
     }
 }

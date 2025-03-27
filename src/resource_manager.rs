@@ -226,3 +226,23 @@ impl ResourceManager {
         })
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_singleton() {
+        let rm1 = ResourceManager::new().unwrap();
+        let rm2 = ResourceManager::new().unwrap();
+
+        // Make sure they point to the same instance
+        assert_eq!(rm1.session_id(), rm2.session_id());
+    }
+
+    #[test]
+    fn test_search() {
+        let rm = ResourceManager::new().expect("Failed to create resource manager");
+        let _ = rm.search("?*").expect("Failed to search for devices");
+    }
+}
