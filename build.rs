@@ -1,6 +1,7 @@
 fn main() {
     if let Err(e) = link_lib() {
         eprintln!("cargo:error={e}");
+        panic!();
     }
 }
 
@@ -15,6 +16,15 @@ fn link_lib() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         "visa32"
     };
+
+    let search_dir = visa_path.join("Lib_x64").join("msc");
+
+    // Check if the library exists
+    if !search_dir.join(format!("{target_lib}.lib")).exists()
+        && !visa_path.join(format!("{target_lib}.lib")).exists()
+    {
+        return Err(format!("The library {target_lib}.lib does not exist in the expected directories: {search_dir:?} or {visa_path:?}").into());
+    }
 
     // link to the VISA library
     let search_dir = visa_path.join("Lib_x64").join("msc");
