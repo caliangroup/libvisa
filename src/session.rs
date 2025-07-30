@@ -84,7 +84,13 @@ impl Session {
 
         let mut vi = bindings::ViSession::default();
         Error::wrap_binding(None, || unsafe {
-            bindings::viOpen(rm.session_id(), name.as_ptr(), mode, open_timeout, &mut vi)
+            bindings::viOpen(
+                rm.session_id(),
+                name.as_ptr(),
+                mode,
+                open_timeout,
+                &raw mut vi,
+            )
         })?;
 
         let io_lock = Arc::new(Mutex::new(()));
@@ -274,7 +280,7 @@ impl Session {
     pub fn buffer_write(&self, buf: &[u8]) -> Result<(), Error> {
         let mut written = 0;
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viBufWrite(self.vi, buf.as_ptr(), buf.len() as u32, &mut written)
+            bindings::viBufWrite(self.vi, buf.as_ptr(), buf.len() as u32, &raw mut written)
         })?;
         Ok(())
     }
@@ -287,7 +293,7 @@ impl Session {
         let mut buf = vec![0u8; len];
         let mut read = 0;
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viBufRead(self.vi, buf.as_mut_ptr(), len as u32, &mut read)
+            bindings::viBufRead(self.vi, buf.as_mut_ptr(), len as u32, &raw mut read)
         })?;
         buf.resize(read as usize, 0);
         Ok(buf)
@@ -350,24 +356,37 @@ impl Session {
 
     /// The `viAssertTrigger()` operation sources a software or hardware trigger dependent on the interface type.
     ///
-    /// Software Triggers for 488.2 Instruments (GPIB, VXI, TCPIP, and USB)  
-    /// This operation sends an IEEE-488.2 software trigger to the addressed device. For software triggers, `VI_TRIG_PROT_DEFAULT` is the only valid protocol.  
+    /// Software Triggers for 488.2 Instruments (GPIB, VXI, TCPIP, and USB)
+    ///
+    /// This operation sends an IEEE-488.2 software trigger to the addressed device. For software triggers, `VI_TRIG_PROT_DEFAULT` is the only valid protocol.
+    ///
     /// The bus-specific details are:
     ///
-    /// For a GPIB device, VISA addresses the device to listen and then sends the GPIB GET command.  
-    /// For a VXI device, VISA sends the Word Serial Trigger command.  
-    /// For a USB device, VISA sends the TRIGGER message ID on the Bulk-OUT pipe.  
-    /// Software Triggers for Non-488.2 Instruments (Serial INSTR, TCPIP SOCKET, and USB RAW)  
-    /// If `VI_ATTR_IO_PROT` is `VI_PROT_4882_STRS`, this operations sends "*TRG\n" to the device; otherwise, this operation is not valid.  
-    /// For software triggers, `VI_TRIG_PROT_DEFAULT` is the only valid protocol.  
+    /// For a GPIB device, VISA addresses the device to listen and then sends the GPIB GET command.
     ///
-    /// Hardware Triggering for VXI  
-    /// For hardware triggers to VXI instruments, `VI_ATTR_TRIG_ID` must first be set to the desired trigger line to use;  
-    /// this operation performs the specified trigger operation on the previously selected trigger line.  
+    /// For a VXI device, VISA sends the Word Serial Trigger command.
+    ///
+    /// For a USB device, VISA sends the TRIGGER message ID on the Bulk-OUT pipe.
+    ///
+    /// Software Triggers for Non-488.2 Instruments (Serial INSTR, TCPIP SOCKET, and USB RAW)
+    ///
+    /// If `VI_ATTR_IO_PROT` is `VI_PROT_4882_STRS`, this operations sends "*TRG\n" to the device; otherwise, this operation is not valid.
+    ///
+    /// For software triggers, `VI_TRIG_PROT_DEFAULT` is the only valid protocol.
+    ///
+    ///
+    /// Hardware Triggering for VXI
+    ///
+    /// For hardware triggers to VXI instruments, `VI_ATTR_TRIG_ID` must first be set to the desired trigger line to use;
+    ///
+    /// this operation performs the specified trigger operation on the previously selected trigger line.
+    ///
     /// For VXI hardware triggers, `VI_TRIG_PROT_DEFAULT` is equivalent to `VI_TRIG_PROT_SYNC`.
     ///
-    /// Trigger Reservation for PXI  
-    /// For PXI instruments, this operation reserves or releases (unreserves) a trigger line for use in external triggering.  
+    /// Trigger Reservation for PXI
+    ///
+    /// For PXI instruments, this operation reserves or releases (unreserves) a trigger line for use in external triggering.
+    ///
     /// For PXI triggers, `VI_TRIG_PROT_RESERVE` and `VI_TRIG_PROT_UNRESERVE` are the only valid protocols.
     ///
     /// # Errors
@@ -378,26 +397,40 @@ impl Session {
         })
     }
 
-    /// Status Bytes for 488.2 Instruments (GPIB, VXI, TCPIP, and USB)  
+    /// Status Bytes for 488.2 Instruments (GPIB, VXI, TCPIP, and USB)
+    ///
     /// This operation reads a service request status from a message-based device. The bus-specific details are:
     ///
-    /// For a GPIB device, the status is read by serial polling the device.  
-    /// For a VXI device, VISA sends the Word Serial Read STB query.  
-    /// For a USB device, this function sends the `READ_STATUS_BYTE` command on the control pipe.  
-    /// Status Bytes for Non-488.2 Instruments (Serial INSTR, TCPIP SOCKET, and USB RAW)  
-    /// A message is sent in response to a service request to retrieve status information.  
-    /// If `VI_ATTR_IO_PROT` is `VI_PROT_4882_STRS`, the device is sent the string "*STB?\n", and then the device's status byte is read;  
+    /// For a GPIB device, the status is read by serial polling the device.
+    ///
+    /// For a VXI device, VISA sends the Word Serial Read STB query.
+    ///
+    /// For a USB device, this function sends the `READ_STATUS_BYTE` command on the control pipe.
+    ///
+    /// Status Bytes for Non-488.2 Instruments (Serial INSTR, TCPIP SOCKET, and USB RAW)
+    ///
+    /// A message is sent in response to a service request to retrieve status information.
+    ///
+    /// If `VI_ATTR_IO_PROT` is `VI_PROT_4882_STRS`, the device is sent the string "*STB?\n", and then the device's status byte is read;
+    ///
     /// Otherwise, this operation is not valid.
     ///
-    /// Although the status output is a 16-bit value, the upper 8 bits are always 0. The lower 8 bits contain the actual status byte.  
+    /// Although the status output is a 16-bit value, the upper 8 bits are always 0. The lower 8 bits contain the actual status byte.
+    ///
     /// For 488.2 instruments, this is the 488.2-defined status byte.
     ///
-    /// The IEEE 488.2 standard defines several bit assignments in the status byte. For example, if bit 6 of the status is set, the device is requesting service.  
-    /// In addition to setting bit 6 when requesting service, 488.2 devices also use two other bits to specify their status.  
-    /// Bit 4, the Message Available bit (MAV), is set when the device is ready to send previously queried data.  
-    /// Bit 5, the Event Status bit (ESB), is set if one or more of the enabled 488.2 events occurs.  
-    /// These events include power-on, user request, command error, execution error, device dependent error, query error, request control, and operation complete.  
-    /// The device can assert SRQ when ESB or MAV are set, or when a manufacturer-defined condition occurs.  
+    /// The IEEE 488.2 standard defines several bit assignments in the status byte. For example, if bit 6 of the status is set, the device is requesting service.
+    ///
+    /// In addition to setting bit 6 when requesting service, 488.2 devices also use two other bits to specify their status.
+    ///
+    /// Bit 4, the Message Available bit (MAV), is set when the device is ready to send previously queried data.
+    ///
+    /// Bit 5, the Event Status bit (ESB), is set if one or more of the enabled 488.2 events occurs.
+    ///
+    /// These events include power-on, user request, command error, execution error, device dependent error, query error, request control, and operation complete.
+    ///
+    /// The device can assert SRQ when ESB or MAV are set, or when a manufacturer-defined condition occurs.
+    ///
     /// Manufacturers of 488.2 devices use the remaining lower-order bits to communicate the reason for the service request or to summarize the device state.
     ///
     /// # Errors
@@ -405,7 +438,7 @@ impl Session {
     pub fn read_status(&self) -> Result<u8, Error> {
         let mut status: u16 = 0;
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viReadSTB(self.vi, &mut status)
+            bindings::viReadSTB(self.vi, &raw mut status)
         })?;
 
         // Upper 8 bits are always 0, safe to cast to u8
@@ -556,15 +589,24 @@ impl Session {
     // Event handling
     //=========================================================================
 
-    /// The `viEnableEvent()` operation enables notification of an event identified by the eventType parameter for mechanisms specified in the mechanism parameter.  
-    /// The specified session can be enabled to queue events by specifying `VI_QUEUE`.  
-    /// Applications can enable the session to invoke a callback function to execute the handler by specifying `VI_HNDLR`.  
-    /// The applications are required to install at least one handler to be enabled for this mode.  
-    /// Specifying `VI_SUSPEND_HNDLR` enables the session to receive callbacks, but the invocation of the handler is deferred to a later time.  
-    /// Successive calls to this operation replace the old callback mechanism with the new callback mechanism.  
-    /// Specifying `VI_ALL_ENABLED_EVENTS` for the eventType parameter refers to all events which have previously been enabled on this session,  
-    /// making it easier to switch between the two callback mechanisms for multiple events.  
-    /// NI-VISA does not support enabling both the queue and the handler for the same event type on the same session.  
+    /// The `viEnableEvent()` operation enables notification of an event identified by the eventType parameter for mechanisms specified in the mechanism parameter.
+    ///
+    /// The specified session can be enabled to queue events by specifying `VI_QUEUE`.
+    ///
+    /// Applications can enable the session to invoke a callback function to execute the handler by specifying `VI_HNDLR`.
+    ///
+    /// The applications are required to install at least one handler to be enabled for this mode.
+    ///
+    /// Specifying `VI_SUSPEND_HNDLR` enables the session to receive callbacks, but the invocation of the handler is deferred to a later time.
+    ///
+    /// Successive calls to this operation replace the old callback mechanism with the new callback mechanism.
+    ///
+    /// Specifying `VI_ALL_ENABLED_EVENTS` for the eventType parameter refers to all events which have previously been enabled on this session,
+    ///
+    /// making it easier to switch between the two callback mechanisms for multiple events.
+    ///
+    /// NI-VISA does not support enabling both the queue and the handler for the same event type on the same session.
+    ///
     /// If you need to use both mechanisms for the same event type, you should open multiple sessions to the resource.
     ///
     /// # Errors
@@ -580,12 +622,18 @@ impl Session {
         })
     }
 
-    /// The `viDisableEvent()` operation disables servicing of an event identified by the eventType parameter for the mechanisms specified in the mechanism parameter.  
-    /// This operation prevents new event occurrences from being added to the queue(s). However, event occurrences already existing in the queue(s) are not flushed.  
-    /// Use `viDiscardEvents()` if you want to discard events remaining in the queue(s).  
-    /// Specifying `VI_ALL_ENABLED_EVENTS` for the eventType parameter allows a session to stop receiving all events.  
-    /// The session can stop receiving queued events by specifying `VI_QUEUE`.  
-    /// Applications can stop receiving callback events by specifying either `VI_HNDLR` or `VI_SUSPEND_HNDLR`.  
+    /// The `viDisableEvent()` operation disables servicing of an event identified by the eventType parameter for the mechanisms specified in the mechanism parameter.
+    ///
+    /// This operation prevents new event occurrences from being added to the queue(s). However, event occurrences already existing in the queue(s) are not flushed.
+    ///
+    /// Use `viDiscardEvents()` if you want to discard events remaining in the queue(s).
+    ///
+    /// Specifying `VI_ALL_ENABLED_EVENTS` for the eventType parameter allows a session to stop receiving all events.
+    ///
+    /// The session can stop receiving queued events by specifying `VI_QUEUE`.
+    ///
+    /// Applications can stop receiving callback events by specifying either `VI_HNDLR` or `VI_SUSPEND_HNDLR`.
+    ///
     /// Specifying `VI_ALL_MECH` disables both the queuing and callback mechanisms.
     ///
     /// # Errors
@@ -600,11 +648,16 @@ impl Session {
         })
     }
 
-    /// The `viDiscardEvents()` operation discards all pending occurrences of the specified event types and mechanisms from the specified session.  
-    /// Specifying `VI_ALL_ENABLED_EVENTS` for the eventType parameter discards events of every type that is enabled for the given session.  
-    /// The information about all the event occurrences which have not yet been handled is discarded.  
-    /// This operation is useful to remove event occurrences that an application no longer needs.  
-    /// The discarded event occurrences are not available to a session at a later time.  
+    /// The `viDiscardEvents()` operation discards all pending occurrences of the specified event types and mechanisms from the specified session.
+    ///
+    /// Specifying `VI_ALL_ENABLED_EVENTS` for the eventType parameter discards events of every type that is enabled for the given session.
+    ///
+    /// The information about all the event occurrences which have not yet been handled is discarded.
+    ///
+    /// This operation is useful to remove event occurrences that an application no longer needs.
+    ///
+    /// The discarded event occurrences are not available to a session at a later time.
+    ///
     /// This operation does not apply to event contexts that have already been delivered to the application.
     ///
     /// # Errors
@@ -619,16 +672,24 @@ impl Session {
         })
     }
 
-    /// The `viInstallHandler()` operation allows applications to install handlers on sessions.  
+    /// The `viInstallHandler()` operation allows applications to install handlers on sessions.
+    ///
     /// You can use the `define_event_handler` macro to define a handler if you don't need to pass user data.
     ///
-    /// The handler specified in the handler parameter is installed along with any previously installed handlers for the specified event.  
-    /// Applications can specify a value in the userHandle parameter that is passed to the handler on its invocation.  
-    /// VISA identifies handlers uniquely using the handler reference and this value.  
-    /// VISA allows applications to install multiple handlers for an eventType on the same session.  
-    /// You can install multiple handlers through multiple invocations of the `viInstallHandler()` operation,  
-    /// where each invocation adds to the previous list of handlers.  
-    /// If more than one handler is installed for an eventType, each of the handlers is invoked on every occurrence of the specified event(s).  
+    /// The handler specified in the handler parameter is installed along with any previously installed handlers for the specified event.
+    ///
+    /// Applications can specify a value in the userHandle parameter that is passed to the handler on its invocation.
+    ///
+    /// VISA identifies handlers uniquely using the handler reference and this value.
+    ///
+    /// VISA allows applications to install multiple handlers for an eventType on the same session.
+    ///
+    /// You can install multiple handlers through multiple invocations of the `viInstallHandler()` operation,
+    ///
+    /// where each invocation adds to the previous list of handlers.
+    ///
+    /// If more than one handler is installed for an eventType, each of the handlers is invoked on every occurrence of the specified event(s).
+    ///
     /// VISA specifies that the handlers are invoked in Last In First Out (LIFO) order.
     ///
     /// # Errors
@@ -652,11 +713,16 @@ impl Session {
         })
     }
 
-    /// The `viUninstallHandler()` operation allows applications to uninstall handlers for events on sessions.  
-    /// Applications should also specify the value in the userHandle parameter that was passed while installing the handler.  
-    /// VISA identifies handlers uniquely using the handler reference and this value.  
-    /// All the handlers, for which the handler reference and the value matches, are uninstalled.  
-    /// Specifying `VI_ANY_HNDLR` as the value for the handler parameter causes the operation to uninstall all  
+    /// The `viUninstallHandler()` operation allows applications to uninstall handlers for events on sessions.
+    ///
+    /// Applications should also specify the value in the userHandle parameter that was passed while installing the handler.
+    ///
+    /// VISA identifies handlers uniquely using the handler reference and this value.
+    ///
+    /// All the handlers, for which the handler reference and the value matches, are uninstalled.
+    ///
+    /// Specifying `VI_ANY_HNDLR` as the value for the handler parameter causes the operation to uninstall all
+    ///
     /// the handlers with the matching value in the userHandle parameter.
     ///
     /// # Errors
@@ -680,18 +746,30 @@ impl Session {
         })
     }
 
-    /// Waits for an occurrence of the specified event for a given session.  
-    /// The `viWaitOnEvent()` operation suspends the execution of a thread of an application and waits for an event of the  
-    /// type specified by inEventType for a time period specified by timeout.  
-    /// You can wait only for events that have been enabled with the `viEnableEvent()` operation.  
-    /// Refer to individual event descriptions for context definitions.  
-    /// If the specified inEventType is `VI_ALL_ENABLED_EVENTS`, the operation waits for any event that is enabled for the given session.  
-    /// If the specified timeout value is `VI_TMO_INFINITE`, the operation is suspended indefinitely.  
-    /// If the specified timeout value is `VI_TMO_IMMEDIATE`, the operation is not suspended; therefore, this value can be used to dequeue events from an event queue.  
-    /// When the outContext handle returned from a successful invocation of `viWaitOnEvent()` is no longer needed, it should be passed to `viClose()`.  
-    /// If a session's event queue becomes full and a new event arrives, the new event is discarded.  
-    /// The default event queue size (per session) is 50, which is sufficiently large for most  applications.  
-    /// If an application expects more than 50 events to arrive without having been handled, it can modify the value of the  
+    /// Waits for an occurrence of the specified event for a given session.
+    ///
+    /// The `viWaitOnEvent()` operation suspends the execution of a thread of an application and waits for an event of the
+    ///
+    /// type specified by inEventType for a time period specified by timeout.
+    ///
+    /// You can wait only for events that have been enabled with the `viEnableEvent()` operation.
+    ///
+    /// Refer to individual event descriptions for context definitions.
+    ///
+    /// If the specified inEventType is `VI_ALL_ENABLED_EVENTS`, the operation waits for any event that is enabled for the given session.
+    ///
+    /// If the specified timeout value is `VI_TMO_INFINITE`, the operation is suspended indefinitely.
+    ///
+    /// If the specified timeout value is `VI_TMO_IMMEDIATE`, the operation is not suspended; therefore, this value can be used to dequeue events from an event queue.
+    ///
+    /// When the outContext handle returned from a successful invocation of `viWaitOnEvent()` is no longer needed, it should be passed to `viClose()`.
+    ///
+    /// If a session's event queue becomes full and a new event arrives, the new event is discarded.
+    ///
+    /// The default event queue size (per session) is 50, which is sufficiently large for most  applications.
+    ///
+    /// If an application expects more than 50 events to arrive without having been handled, it can modify the value of the
+    ///
     /// attribute `VI_ATTR_MAX_QUEUE_LENGTH` to the required size.
     ///
     /// # Errors
@@ -708,7 +786,7 @@ impl Session {
                 in_event_type as u32,
                 timeout.as_millis() as u32,
                 std::ptr::null_mut(),
-                &mut context,
+                &raw mut context,
             )
         })?;
 
@@ -730,7 +808,7 @@ impl Session {
     ) -> Result<AsyncTask, Error> {
         let mut jobid = bindings::ViJobId::default();
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viReadAsync(self.vi, std::ptr::null_mut(), bytes as u32, &mut jobid)
+            bindings::viReadAsync(self.vi, std::ptr::null_mut(), bytes as u32, &raw mut jobid)
         })?;
 
         self.add_event_handler::<AsyncTask>(event::Event::IoCompletion, Some(&mut jobid))?;
@@ -754,7 +832,7 @@ impl Session {
     ) -> Result<AsyncTask, Error> {
         let mut jobid = bindings::ViJobId::default();
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viWriteAsync(self.vi, buf.as_ptr(), buf.len() as u32, &mut jobid)
+            bindings::viWriteAsync(self.vi, buf.as_ptr(), buf.len() as u32, &raw mut jobid)
         })?;
 
         self.add_event_handler::<AsyncTask>(event::Event::IoCompletion, Some(&mut jobid))?;
@@ -784,7 +862,7 @@ impl Session {
 
         let mut written = 0;
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viWriteFromFile(self.vi, filename.as_ptr(), size as u32, &mut written)
+            bindings::viWriteFromFile(self.vi, filename.as_ptr(), size as u32, &raw mut written)
         })
     }
 
@@ -798,7 +876,7 @@ impl Session {
 
         let mut written = 0;
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viReadToFile(self.vi, filename.as_ptr(), size as u32, &mut written)
+            bindings::viReadToFile(self.vi, filename.as_ptr(), size as u32, &raw mut written)
         })
     }
 }
@@ -809,9 +887,14 @@ impl std::io::Read for Session {
 
         let mut bytes_read = 0;
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viRead(self.vi, buf.as_mut_ptr(), buf.len() as u32, &mut bytes_read)
+            bindings::viRead(
+                self.vi,
+                buf.as_mut_ptr(),
+                buf.len() as u32,
+                &raw mut bytes_read,
+            )
         })
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        .map_err(std::io::Error::other)?;
 
         Ok(bytes_read as usize)
     }
@@ -823,9 +906,14 @@ impl std::io::Write for Session {
 
         let mut bytes_written = 0;
         Error::wrap_binding(Some(self.vi), || unsafe {
-            bindings::viWrite(self.vi, buf.as_ptr(), buf.len() as u32, &mut bytes_written)
+            bindings::viWrite(
+                self.vi,
+                buf.as_ptr(),
+                buf.len() as u32,
+                &raw mut bytes_written,
+            )
         })
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        .map_err(std::io::Error::other)?;
         Ok(bytes_written as usize)
     }
 

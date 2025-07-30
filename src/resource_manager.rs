@@ -68,8 +68,8 @@ impl Resource {
             bindings::viParseRsrcEx(
                 self.rm,
                 name.as_ptr(),
-                &mut interface,
-                &mut board,
+                &raw mut interface,
+                &raw mut board,
                 class.as_mut_ptr(),
                 expanded_name.as_mut_ptr(),
                 alias.as_mut_ptr(),
@@ -178,7 +178,7 @@ impl ResourceManager {
         }
 
         let mut id = ResourceManagerSession::default();
-        Error::wrap_binding(None, || unsafe { bindings::viOpenDefaultRM(&mut id) })?;
+        Error::wrap_binding(None, || unsafe { bindings::viOpenDefaultRM(&raw mut id) })?;
 
         set_singleton_rm_id(id);
         Ok(Self(id))
@@ -205,8 +205,8 @@ impl ResourceManager {
             bindings::viFindRsrc(
                 self.0,
                 expr.as_ptr(),
-                &mut list,
-                &mut count,
+                &raw mut list,
+                &raw mut count,
                 interface.as_mut_ptr(),
             )
         })?;

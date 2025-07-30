@@ -27,9 +27,9 @@ fn main() -> Result<(), Error> {
     // Scope specific commands
     session.write_all(&["*RST", "*CLS", ":AUTOSCALE"])?;
 
-    println!("Model: {}", model);
+    println!("Model: {model}");
     if let Some(serial) = serial {
-        println!("Serial: {}", serial);
+        println!("Serial: {serial}");
     }
 
     let task = session.read_async(256, std::time::Duration::from_secs(1))?;

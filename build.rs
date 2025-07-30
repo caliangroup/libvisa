@@ -18,6 +18,7 @@ fn link_lib() -> Result<(), Box<dyn std::error::Error>> {
 
     // link to the VISA library
     let search_dir = visa_path.join("Lib_x64").join("msc");
+    println!("cargo:rustc-link-search=native={}", visa_path.display());
     println!("cargo:rustc-link-search=native={}", search_dir.display());
     println!("cargo:rustc-link-lib=static={target_lib}");
 

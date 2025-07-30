@@ -1,6 +1,7 @@
 //! # NIST VISA library bindings
 //!
-//! This crate provides a safe wrapper around the NIST VISA library.  
+//! This crate provides a safe wrapper around the NIST VISA library.
+//!
 //! It is designed to be as simple to use as possible.
 #![warn(missing_docs)]
 #![warn(missing_debug_implementations)]
@@ -10,6 +11,7 @@ mod variadic_macro;
 
 // Internal bindings - raw library access
 #[allow(non_camel_case_types)]
+#[allow(non_snake_case)]
 #[allow(missing_docs)]
 #[allow(clippy::all)]
 #[allow(non_upper_case_globals)]
