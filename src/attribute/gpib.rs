@@ -8,19 +8,19 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_GPIB_READDR_EN specifies whether to use repeat addressing before each read or write operation."
+    "`VI_ATTR_GPIB_READDR_EN` specifies whether to use repeat addressing before each read or write operation."
     GpibReaddrEn(bool)
 );
 
 impl_attr!(
-    "VI_ATTR_GPIB_PRIMARY_ADDR specifies the primary address of the GPIB device used by the given session."
+    "`VI_ATTR_GPIB_PRIMARY_ADDR` specifies the primary address of the GPIB device used by the given session."
     "For the GPIB INTFC Resource, this attribute is Read-Write."
     "Valid values are 0 to 30."
     GpibPrimaryAddr(u16)
 );
 
 impl_attr!(
-    "VI_ATTR_GPIB_PRIMARY_ADDR specifies the secondary address of the GPIB device used by the given session."
+    "`VI_ATTR_GPIB_PRIMARY_ADDR` specifies the secondary address of the GPIB device used by the given session."
     "For the GPIB INTFC Resource, this attribute is Read-Write."
     "Valid values are 0 to 30, or 0x"
     GpibSecondaryAddr(u16, Option<u16>),
@@ -41,7 +41,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "This attribute shows the current state of the GPIB ATN (ATtentioN) interface line."
+    "This attribute shows the current state of the GPIB ATN (`ATtentioN`) interface line."
     GpibAtnState(i16, State),
     from = |value| {
         let value = value as i16;
@@ -84,7 +84,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "This attribute shows the current state of the GPIB NDAC (Not Data ACcepted) interface line."
+    "This attribute shows the current state of the GPIB NDAC (Not Data `ACcepted`) interface line."
     GpibNdacState(i16, State),
     from = |value| {
         let value = value as i16;
@@ -98,7 +98,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "This attribute shows the current state of the GPIB SRQ (Service ReQuest) interface line."
+    "This attribute shows the current state of the GPIB SRQ (Service `ReQuest`) interface line."
     GpibSrqState(i16, State),
     from = |value| {
         let value = value as i16;
@@ -156,7 +156,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_GPIB_REN_STATE returns the current state of the GPIB REN (Remote ENable) interface line."
+    "`VI_ATTR_GPIB_REN_STATE` returns the current state of the GPIB REN (Remote `ENable`) interface line."
     GpibRenState(i32, State),
 
     from = |value| {
@@ -171,6 +171,6 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_GPIB_UNADDR_EN specifies whether to unaddress the device (UNT and UNL) after each read or write operation."
+    "`VI_ATTR_GPIB_UNADDR_EN` specifies whether to unaddress the device (UNT and UNL) after each read or write operation."
     GpibUnaddrEn(bool)
 );

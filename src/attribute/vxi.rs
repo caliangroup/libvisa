@@ -3,7 +3,7 @@ use super::{ReadOnlyI16, State};
 use crate::bindings;
 
 impl_attr!(
-    "For an INSTR session, VI_ATTR_VXI_LA specifies the logical address of the VXI or VME device used by the given session"
+    "For an INSTR session, `VI_ATTR_VXI_LA` specifies the logical address of the VXI or VME device used by the given session"
     "For a MEMACC or SERVANT session, this attribute specifies the logical address of the local controller."
     VxiLa(ReadOnlyI16, ReadOnlyI16),
 
@@ -17,7 +17,7 @@ impl_attr!(
 
 impl_attr!(
     "This attribute shows which VXI trigger lines this implementation supports."
-    "This is a bit vector with bits 0-9 corresponding to VI_TRIG_TTL0 through VI_TRIG_ECL1."
+    "This is a bit vector with bits 0-9 corresponding to `VI_TRIG_TTL0` through `VI_TRIG_ECL1`."
     VxiTrigSupport(ReadOnlyU32)
 );
 
@@ -40,11 +40,11 @@ pub enum VxiDevClassType {
 
 impl_attr!(
     "This attribute represents the VXI-defined device class to which the resource belongs, either:"
-    "message based (VI_VXI_CLASS_MESSAGE),"
-    "register based (VI_VXI_CLASS_REGISTER),"
-    "extended (VI_VXI_CLASS_EXTENDED),"
-    "or memory (VI_VXI_CLASS_MEMORY)."
-    "VME devices are usually either register based or belong to a miscellaneous class (VI_VXI_CLASS_OTHER)."
+    "message based (`VI_VXI_CLASS_MESSAGE`),"
+    "register based (`VI_VXI_CLASS_REGISTER`),"
+    "extended (`VI_VXI_CLASS_EXTENDED`),"
+    "or memory (`VI_VXI_CLASS_MEMORY`)."
+    "VME devices are usually either register based or belong to a miscellaneous class (`VI_VXI_CLASS_OTHER`)."
     VxiDevClass(u16, VxiDevClassType),
 
     from = |value| {
@@ -62,12 +62,12 @@ impl_attr!(
 
 impl_attr!(
     "This attribute shows which VXI trigger lines this implementation supports.
-    This is a bit vector with bits 0-9 corresponding to VI_TRIG_TTL0 through VI_TRIG_ECL1."
+    This is a bit vector with bits 0-9 corresponding to `VI_TRIG_TTL0` through `VI_TRIG_ECL1`."
     VxiTrigStatus(ReadOnlyU32)
 );
 
 impl_attr!(
-    "This attribute shows the current state of the VXI/VME SYSFAIL (SYStem FAILure) backplane line."
+    "This attribute shows the current state of the VXI/VME SYSFAIL backplane line."
     VxiVmeSysfailState(i16, State),
 
     from = |value| {
@@ -82,6 +82,6 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_4882_COMPLIANT specifies whether the device is 488.2 compliant."
+    "`VI_ATTR_4882_COMPLIANT` specifies whether the device is 488.2 compliant."
     Is4882Compliant(bool)
 );

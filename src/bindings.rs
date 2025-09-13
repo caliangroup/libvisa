@@ -539,9 +539,17 @@ pub type wchar_t = ::std::os::raw::c_ushort;
 extern "C" {
     pub fn __security_init_cookie();
 }
+
+#[cfg(all(target_arch = "x86", target_os = "windows"))]
 extern "fastcall" {
     pub fn __security_check_cookie(_StackCookie: usize);
 }
+
+#[cfg(not(all(target_arch = "x86", target_os = "windows")))]
+extern "C" {
+    pub fn __security_check_cookie(_StackCookie: usize);
+}
+
 extern "C" {
     pub fn __report_gsfailure() -> !;
 }
@@ -641,17 +649,17 @@ pub type ViPBusAddress = *mut ViBusAddress;
 pub type ViEventFilter = ViUInt32;
 pub type ViVAList = va_list;
 pub type ViHndlr = ::std::option::Option<
-    unsafe extern "stdcall" fn(
+    unsafe extern "system" fn(
         vi: ViSession,
         eventType: ViEventType,
         event: ViEvent,
         userHandle: ViAddr,
     ) -> ViStatus,
 >;
-extern "stdcall" {
+extern "system" {
     pub fn viOpenDefaultRM(vi: ViPSession) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viFindRsrc(
         sesn: ViSession,
         expr: ViConstString,
@@ -660,10 +668,10 @@ extern "stdcall" {
         desc: *mut ViChar,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viFindNext(vi: ViFindList, desc: *mut ViChar) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viParseRsrc(
         rmSesn: ViSession,
         rsrcName: ViConstRsrc,
@@ -671,7 +679,7 @@ extern "stdcall" {
         intfNum: ViPUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viParseRsrcEx(
         rmSesn: ViSession,
         rsrcName: ViConstRsrc,
@@ -682,7 +690,7 @@ extern "stdcall" {
         aliasIfExists: *mut ViChar,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viOpen(
         sesn: ViSession,
         name: ViConstRsrc,
@@ -691,26 +699,26 @@ extern "stdcall" {
         vi: ViPSession,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viClose(vi: ViObject) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viSetAttribute(vi: ViObject, attrName: ViAttr, attrValue: ViAttrState) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viGetAttribute(
         vi: ViObject,
         attrName: ViAttr,
         attrValue: *mut ::std::os::raw::c_void,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viStatusDesc(vi: ViObject, status: ViStatus, desc: *mut ViChar) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viTerminate(vi: ViObject, degree: ViUInt16, jobId: ViJobId) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viLock(
         vi: ViSession,
         lockType: ViAccessMode,
@@ -719,10 +727,10 @@ extern "stdcall" {
         accessKey: *mut ViChar,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viUnlock(vi: ViSession) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viEnableEvent(
         vi: ViSession,
         eventType: ViEventType,
@@ -730,13 +738,13 @@ extern "stdcall" {
         context: ViEventFilter,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viDisableEvent(vi: ViSession, eventType: ViEventType, mechanism: ViUInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viDiscardEvents(vi: ViSession, eventType: ViEventType, mechanism: ViUInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viWaitOnEvent(
         vi: ViSession,
         inEventType: ViEventType,
@@ -745,7 +753,7 @@ extern "stdcall" {
         outContext: ViPEvent,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viInstallHandler(
         vi: ViSession,
         eventType: ViEventType,
@@ -753,7 +761,7 @@ extern "stdcall" {
         userHandle: ViAddr,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viUninstallHandler(
         vi: ViSession,
         eventType: ViEventType,
@@ -761,13 +769,13 @@ extern "stdcall" {
         userHandle: ViAddr,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viRead(vi: ViSession, buf: ViPBuf, cnt: ViUInt32, retCnt: ViPUInt32) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viReadAsync(vi: ViSession, buf: ViPBuf, cnt: ViUInt32, jobId: ViPJobId) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viReadToFile(
         vi: ViSession,
         filename: ViConstString,
@@ -775,14 +783,14 @@ extern "stdcall" {
         retCnt: ViPUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viWrite(vi: ViSession, buf: ViConstBuf, cnt: ViUInt32, retCnt: ViPUInt32) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viWriteAsync(vi: ViSession, buf: ViConstBuf, cnt: ViUInt32, jobId: ViPJobId)
         -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viWriteFromFile(
         vi: ViSession,
         filename: ViConstString,
@@ -790,38 +798,38 @@ extern "stdcall" {
         retCnt: ViPUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viAssertTrigger(vi: ViSession, protocol: ViUInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viReadSTB(vi: ViSession, status: ViPUInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viClear(vi: ViSession) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viSetBuf(vi: ViSession, mask: ViUInt16, size: ViUInt32) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viFlush(vi: ViSession, mask: ViUInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viBufWrite(vi: ViSession, buf: ViConstBuf, cnt: ViUInt32, retCnt: ViPUInt32)
         -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viBufRead(vi: ViSession, buf: ViPBuf, cnt: ViUInt32, retCnt: ViPUInt32) -> ViStatus;
 }
 extern "C" {
     pub fn viPrintf(vi: ViSession, writeFmt: ViConstString, ...) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viVPrintf(vi: ViSession, writeFmt: ViConstString, params: ViVAList) -> ViStatus;
 }
 extern "C" {
     pub fn viSPrintf(vi: ViSession, buf: ViPBuf, writeFmt: ViConstString, ...) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viVSPrintf(
         vi: ViSession,
         buf: ViPBuf,
@@ -832,13 +840,13 @@ extern "stdcall" {
 extern "C" {
     pub fn viScanf(vi: ViSession, readFmt: ViConstString, ...) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viVScanf(vi: ViSession, readFmt: ViConstString, params: ViVAList) -> ViStatus;
 }
 extern "C" {
     pub fn viSScanf(vi: ViSession, buf: ViConstBuf, readFmt: ViConstString, ...) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viVSScanf(
         vi: ViSession,
         buf: ViConstBuf,
@@ -854,7 +862,7 @@ extern "C" {
         ...
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viVQueryf(
         vi: ViSession,
         writeFmt: ViConstString,
@@ -862,13 +870,13 @@ extern "stdcall" {
         params: ViVAList,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viIn8(vi: ViSession, space: ViUInt16, offset: ViBusAddress, val8: ViPUInt8) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viOut8(vi: ViSession, space: ViUInt16, offset: ViBusAddress, val8: ViUInt8) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viIn16(
         vi: ViSession,
         space: ViUInt16,
@@ -876,7 +884,7 @@ extern "stdcall" {
         val16: ViPUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viOut16(
         vi: ViSession,
         space: ViUInt16,
@@ -884,7 +892,7 @@ extern "stdcall" {
         val16: ViUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viIn32(
         vi: ViSession,
         space: ViUInt16,
@@ -892,7 +900,7 @@ extern "stdcall" {
         val32: ViPUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viOut32(
         vi: ViSession,
         space: ViUInt16,
@@ -900,7 +908,7 @@ extern "stdcall" {
         val32: ViUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viIn64(
         vi: ViSession,
         space: ViUInt16,
@@ -908,7 +916,7 @@ extern "stdcall" {
         val64: ViPUInt64,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viOut64(
         vi: ViSession,
         space: ViUInt16,
@@ -916,7 +924,7 @@ extern "stdcall" {
         val64: ViUInt64,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viIn8Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -924,7 +932,7 @@ extern "stdcall" {
         val8: ViPUInt8,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viOut8Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -932,7 +940,7 @@ extern "stdcall" {
         val8: ViUInt8,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viIn16Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -940,7 +948,7 @@ extern "stdcall" {
         val16: ViPUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viOut16Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -948,7 +956,7 @@ extern "stdcall" {
         val16: ViUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viIn32Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -956,7 +964,7 @@ extern "stdcall" {
         val32: ViPUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viOut32Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -964,7 +972,7 @@ extern "stdcall" {
         val32: ViUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viIn64Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -972,7 +980,7 @@ extern "stdcall" {
         val64: ViPUInt64,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viOut64Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -980,7 +988,7 @@ extern "stdcall" {
         val64: ViUInt64,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveIn8(
         vi: ViSession,
         space: ViUInt16,
@@ -989,7 +997,7 @@ extern "stdcall" {
         buf8: ViAUInt8,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveOut8(
         vi: ViSession,
         space: ViUInt16,
@@ -998,7 +1006,7 @@ extern "stdcall" {
         buf8: ViAUInt8,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveIn16(
         vi: ViSession,
         space: ViUInt16,
@@ -1007,7 +1015,7 @@ extern "stdcall" {
         buf16: ViAUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveOut16(
         vi: ViSession,
         space: ViUInt16,
@@ -1016,7 +1024,7 @@ extern "stdcall" {
         buf16: ViAUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveIn32(
         vi: ViSession,
         space: ViUInt16,
@@ -1025,7 +1033,7 @@ extern "stdcall" {
         buf32: ViAUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveOut32(
         vi: ViSession,
         space: ViUInt16,
@@ -1034,7 +1042,7 @@ extern "stdcall" {
         buf32: ViAUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveIn64(
         vi: ViSession,
         space: ViUInt16,
@@ -1043,7 +1051,7 @@ extern "stdcall" {
         buf64: ViAUInt64,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveOut64(
         vi: ViSession,
         space: ViUInt16,
@@ -1052,7 +1060,7 @@ extern "stdcall" {
         buf64: ViAUInt64,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveIn8Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -1061,7 +1069,7 @@ extern "stdcall" {
         buf8: ViAUInt8,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveOut8Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -1070,7 +1078,7 @@ extern "stdcall" {
         buf8: ViAUInt8,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveIn16Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -1079,7 +1087,7 @@ extern "stdcall" {
         buf16: ViAUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveOut16Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -1088,7 +1096,7 @@ extern "stdcall" {
         buf16: ViAUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveIn32Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -1097,7 +1105,7 @@ extern "stdcall" {
         buf32: ViAUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveOut32Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -1106,7 +1114,7 @@ extern "stdcall" {
         buf32: ViAUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveIn64Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -1115,7 +1123,7 @@ extern "stdcall" {
         buf64: ViAUInt64,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveOut64Ex(
         vi: ViSession,
         space: ViUInt16,
@@ -1124,7 +1132,7 @@ extern "stdcall" {
         buf64: ViAUInt64,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMove(
         vi: ViSession,
         srcSpace: ViUInt16,
@@ -1136,7 +1144,7 @@ extern "stdcall" {
         srcLength: ViBusSize,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveAsync(
         vi: ViSession,
         srcSpace: ViUInt16,
@@ -1149,7 +1157,7 @@ extern "stdcall" {
         jobId: ViPJobId,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveEx(
         vi: ViSession,
         srcSpace: ViUInt16,
@@ -1161,7 +1169,7 @@ extern "stdcall" {
         srcLength: ViBusSize,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMoveAsyncEx(
         vi: ViSession,
         srcSpace: ViUInt16,
@@ -1174,7 +1182,7 @@ extern "stdcall" {
         jobId: ViPJobId,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMapAddress(
         vi: ViSession,
         mapSpace: ViUInt16,
@@ -1185,10 +1193,10 @@ extern "stdcall" {
         address: ViPAddr,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viUnmapAddress(vi: ViSession) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMapAddressEx(
         vi: ViSession,
         mapSpace: ViUInt16,
@@ -1199,52 +1207,52 @@ extern "stdcall" {
         address: ViPAddr,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viPeek8(vi: ViSession, address: ViAddr, val8: ViPUInt8);
 }
-extern "stdcall" {
+extern "system" {
     pub fn viPoke8(vi: ViSession, address: ViAddr, val8: ViUInt8);
 }
-extern "stdcall" {
+extern "system" {
     pub fn viPeek16(vi: ViSession, address: ViAddr, val16: ViPUInt16);
 }
-extern "stdcall" {
+extern "system" {
     pub fn viPoke16(vi: ViSession, address: ViAddr, val16: ViUInt16);
 }
-extern "stdcall" {
+extern "system" {
     pub fn viPeek32(vi: ViSession, address: ViAddr, val32: ViPUInt32);
 }
-extern "stdcall" {
+extern "system" {
     pub fn viPoke32(vi: ViSession, address: ViAddr, val32: ViUInt32);
 }
-extern "stdcall" {
+extern "system" {
     pub fn viPeek64(vi: ViSession, address: ViAddr, val64: ViPUInt64);
 }
-extern "stdcall" {
+extern "system" {
     pub fn viPoke64(vi: ViSession, address: ViAddr, val64: ViUInt64);
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMemAlloc(vi: ViSession, size: ViBusSize, offset: ViPBusAddress) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMemFree(vi: ViSession, offset: ViBusAddress) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMemAllocEx(vi: ViSession, size: ViBusSize, offset: ViPBusAddress64) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMemFreeEx(vi: ViSession, offset: ViBusAddress64) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viGpibControlREN(vi: ViSession, mode: ViUInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viGpibControlATN(vi: ViSession, mode: ViUInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viGpibSendIFC(vi: ViSession) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viGpibCommand(
         vi: ViSession,
         cmd: ViConstBuf,
@@ -1252,10 +1260,10 @@ extern "stdcall" {
         retCnt: ViPUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viGpibPassControl(vi: ViSession, primAddr: ViUInt16, secAddr: ViUInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viVxiCommandQuery(
         vi: ViSession,
         mode: ViUInt16,
@@ -1263,13 +1271,13 @@ extern "stdcall" {
         response: ViPUInt32,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viAssertUtilSignal(vi: ViSession, line: ViUInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viAssertIntrSignal(vi: ViSession, mode: ViInt16, statusID: ViUInt32) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viMapTrigger(
         vi: ViSession,
         trigSrc: ViInt16,
@@ -1277,10 +1285,10 @@ extern "stdcall" {
         mode: ViUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viUnmapTrigger(vi: ViSession, trigSrc: ViInt16, trigDest: ViInt16) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viUsbControlOut(
         vi: ViSession,
         bmRequestType: ViInt16,
@@ -1291,7 +1299,7 @@ extern "stdcall" {
         buf: ViConstBuf,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viUsbControlIn(
         vi: ViSession,
         bmRequestType: ViInt16,
@@ -1303,7 +1311,7 @@ extern "stdcall" {
         retCnt: ViPUInt16,
     ) -> ViStatus;
 }
-extern "stdcall" {
+extern "system" {
     pub fn viPxiReserveTriggers(
         vi: ViSession,
         cnt: ViInt16,

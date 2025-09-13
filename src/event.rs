@@ -111,7 +111,7 @@ pub trait HandlerWithData {
     /// Convert the handler to a C handler
     /// # Safety
     /// Do not use directly, use `register_handler` instead
-    unsafe extern "stdcall" fn c_handler(
+    unsafe extern "system" fn c_handler(
         session: bindings::ViSession,
         event_type: bindings::ViEventType,
         event: bindings::ViEvent,

@@ -56,7 +56,10 @@ pub fn get_local_device() -> Session {
             .next()
             .expect("No local USB devices found! Cannot continue testing");
 
-        device.interface().to_string()
+        device
+            .expect("Error getting device interface")
+            .interface()
+            .to_string()
     });
 
     let mut device =

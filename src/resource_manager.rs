@@ -109,19 +109,22 @@ pub struct ResourceSearchResult {
     rm: ResourceManagerSession,
     len: usize,
     list: bindings::ViFindList,
-    next: Option<Resource>,
+    next: Option<Result<Resource, Error>>,
 }
 impl ResourceSearchResult {
     const MAX_INTERFACE: usize = 4096;
-    fn advance(&mut self) -> Result<(), Error> {
+    fn advance(&mut self) {
         if self.len == 0 {
-            return Ok(());
+            return;
         }
 
         let mut desc = [0u8; Self::MAX_INTERFACE];
-        Error::wrap_binding(Some(self.list), || unsafe {
+        if let Err(e) = Error::wrap_binding(Some(self.list), || unsafe {
             bindings::viFindNext(self.list, desc.as_mut_ptr().cast::<i8>())
-        })?;
+        }) {
+            self.next = Some(Err(e));
+            return;
+        }
 
         if let Ok(cstr) = std::ffi::CStr::from_bytes_with_nul(&desc) {
             let desc = cstr.to_string_lossy().into_owned();
@@ -131,25 +134,26 @@ impl ResourceSearchResult {
                 rm: self.rm,
             };
 
-            self.next = Some(resource);
+            self.next = Some(Ok(resource));
         } else {
             self.next = None;
         }
 
         self.len -= 1;
-        Ok(())
     }
 }
 impl Iterator for ResourceSearchResult {
-    type Item = Resource;
+    type Item = Result<Resource, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.len == 0 {
             return None;
         }
 
-        let next = self.next();
-        self.advance().ok()?;
+        let next = self.next.take();
+        if matches!(next, Some(Ok(_))) {
+            self.advance();
+        }
         next
     }
 }
@@ -222,7 +226,7 @@ impl ResourceManager {
             rm: self.0,
             len: count as usize - 1,
             list,
-            next: Some(resource),
+            next: Some(Ok(resource)),
         })
     }
 }
@@ -244,5 +248,21 @@ mod test {
     fn test_search() {
         let rm = ResourceManager::new().expect("Failed to create resource manager");
         let _ = rm.search("?*").expect("Failed to search for devices");
+
+        let mut fake_result = ResourceSearchResult {
+            rm: rm.session_id(),
+            len: 1,
+            list: bindings::ViFindList::default(),
+            next: Some(Ok(Resource {
+                interface: "FAKE::INSTR".to_string(),
+                rm: rm.session_id(),
+            })),
+        };
+
+        assert_eq!(
+            fake_result.next().unwrap().unwrap().interface(),
+            "FAKE::INSTR"
+        );
+        assert!(fake_result.next().unwrap().is_err());
     }
 }

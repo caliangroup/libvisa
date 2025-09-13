@@ -9,7 +9,7 @@ fn main() -> Result<(), Error> {
     // Open the resource manager and search for a matching device
     let manager = ResourceManager::new()?;
     let mut matches = manager.search("USB?*INSTR")?;
-    let resource = matches.next().ok_or(Error::default())?;
+    let resource = matches.next().ok_or(Error::default())??;
 
     // Open a session to the device, set a timeout
     let mut session = Session::new(&manager, resource.as_ref(), Default::default())?;

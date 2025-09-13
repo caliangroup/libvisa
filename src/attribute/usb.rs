@@ -2,30 +2,30 @@
 use crate::bindings;
 
 impl_attr!(
-    "VI_ATTR_USB_SERIAL_NUM specifies the USB serial number of this device."
+    "`VI_ATTR_USB_SERIAL_NUM` specifies the USB serial number of this device."
     UsbSerialNum(ReadOnlyString)
 );
 
 impl_attr!(
-    "VI_ATTR_USB_INTFC_NUM specifies the USB interface number used by the given session."
+    "`VI_ATTR_USB_INTFC_NUM` specifies the USB interface number used by the given session."
     UsbIntfcNum(ReadOnlyI16)
 );
 
 impl_attr!(
-    "VI_ATTR_USB_PROTOCOL specifies the USB protocol used by this USB interface."
+    "`VI_ATTR_USB_PROTOCOL` specifies the USB protocol used by this USB interface."
     UsbProtocol(ReadOnlyI16)
 );
 
 impl_attr!(
-    "VI_ATTR_USB_MAX_INTR_SIZE specifies the maximum size of data that will be stored by any given USB interrupt."
+    "`VI_ATTR_USB_MAX_INTR_SIZE` specifies the maximum size of data that will be stored by any given USB interrupt."
     "If a USB interrupt contains more data than this size, the data in excess of this size will be lost."
-    "VI_ATTR_USB_MAX_INTR_SIZE is Read/Write when the corresponding session is not enabled to receive USB interrupt events"
-    "When the session is enabled to receive USB interrupt events, the attribute VI_ATTR_USB_MAX_INTR_SIZE is Read Only."
+    "`VI_ATTR_USB_MAX_INTR_SIZE` is Read/Write when the corresponding session is not enabled to receive USB interrupt events"
+    "When the session is enabled to receive USB interrupt events, the attribute `VI_ATTR_USB_MAX_INTR_SIZE` is Read Only."
     UsbMaxIntrSize(u16)
 );
 
 impl_attr!(
-    "VI_ATTR_USB_RECV_INTR_SIZE contains the number of bytes of USB interrupt data that is stored."
+    "`VI_ATTR_USB_RECV_INTR_SIZE` contains the number of bytes of USB interrupt data that is stored."
     UsbRecvIntrSize(ReadOnlyU16)
 );
 

@@ -7,7 +7,7 @@ fn main() -> Result<(), Error> {
 
     println!("Found devices:");
     for device in matches {
-        println!("  {device}");
+        println!("  {}", device?);
     }
 
     Ok(())

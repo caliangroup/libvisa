@@ -2,7 +2,7 @@
 use crate::bindings;
 
 impl_attr!(
-    "Specifies HiSLIP overlap mode"
+    "Specifies `HiSLIP` overlap mode"
     TcpipHislipOverlapEn(bool)
 );
 
@@ -17,7 +17,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "Specifies whether the device is a HiSLIP device"
+    "Specifies whether the device is a `HiSLIP` device"
     TcpipIsHislip(ReadOnlyBool)
 );
 

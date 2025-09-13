@@ -3,14 +3,14 @@
 use crate::bindings;
 
 impl_attr!(
-    "VI_ATTR_ASRL_BAUD is the baud rate of the interface."
+    "`VI_ATTR_ASRL_BAUD` is the baud rate of the interface."
     "It is represented as an unsigned 32-bit integer so that any baud rate can be used, but it usually requires a commonly used rate such as: "
     "300, 1200, 2400, or 9600 baud."
     AsrlBaud(u32)
 );
 
 impl_attr!(
-    "VI_ATTR_ASRL_DATA_BITS is the number of data bits contained in each frame (from 5 to 8)."
+    "`VI_ATTR_ASRL_DATA_BITS` is the number of data bits contained in each frame (from 5 to 8)."
     "he data bits for each frame are located in the low-order bits of every byte stored in memory."
     AsrlDataBits(u16)
 );
@@ -28,7 +28,7 @@ pub enum AsrlParityType {
 }
 
 impl_attr!(
-    "VI_ATTR_ASRL_PARITY is the parity used with every frame transmitted and received."
+    "`VI_ATTR_ASRL_PARITY` is the parity used with every frame transmitted and received."
     AsrlParity(u16, AsrlParityType),
     from = |value| {
         let value = u32::from(value);
@@ -57,8 +57,8 @@ pub enum AsrlStopBitsType {
 }
 
 impl_attr!(
-    "VI_ATTR_ASRL_STOP_BITS is the number of stop bits used to indicate the end of a frame."
-    "The value VI_ASRL_STOP_ONE5 indicates one-and-one-half (1.5) stop bits."
+    "`VI_ATTR_ASRL_STOP_BITS` is the number of stop bits used to indicate the end of a frame."
+    "The value `VI_ASRL_STOP_ONE5` indicates one-and-one-half (1.5) stop bits."
     AsrlStopBits(u16, AsrlStopBitsType),
 
     from = |value| {
@@ -97,7 +97,7 @@ pub enum AsrlFlowCntrlType {
 }
 
 impl_attr!(
-    "VI_ATTR_ASRL_FLOW_CNTRL indicates the type of flow control used by the transfer mechanism."
+    "`VI_ATTR_ASRL_FLOW_CNTRL` indicates the type of flow control used by the transfer mechanism."
     AsrlFlowCntrl(u16, AsrlFlowCntrlType),
 
     from = |value| {
@@ -117,7 +117,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_ASRL_AVAIL_NUM shows the number of bytes available in the low-level I/O receive buffer."
+    "`VI_ATTR_ASRL_AVAIL_NUM` shows the number of bytes available in the low-level I/O receive buffer."
     AsrlAvailNum(ReadOnlyU32)
 );
 
@@ -135,7 +135,7 @@ pub enum AsrlState {
     Unknown = bindings::VI_STATE_UNKNOWN as u32,
 }
 impl_attr!(
-    "VI_ATTR_ASRL_CTS_STATE shows the current state of the Clear To Send (CTS) input signal."
+    "`VI_ATTR_ASRL_CTS_STATE` shows the current state of the Clear To Send (CTS) input signal."
     AsrlCtsState(i16, AsrlState),
 
     from = |value| {
@@ -149,10 +149,10 @@ impl_attr!(
     }
 );
 impl_attr!(
-    "VI_ATTR_ASRL_DCD_STATE represents the current state of the Data Carrier Detect (DCD) input signal."
+    "`VI_ATTR_ASRL_DCD_STATE` represents the current state of the Data Carrier Detect (DCD) input signal."
     "The DCD signal is often used by modems to indicate the detection of a carrier (remote modem) on the telephone line."
     "The DCD signal is also known as Receive Line Signal Detect (RLSD)."
-    "This attribute is Read Only except when the VI_ATTR_ASRL_WIRE_MODE attribute is set to VI_ASRL_WIRE_232_DCE, or VI_ASRL_WIRE_232_AUTO with the hardware currently in the DCE state."
+    "This attribute is Read Only except when the `VI_ATTR_ASRL_WIRE_MODE` attribute is set to `VI_ASRL_WIRE_232_DCE`, or `VI_ASRL_WIRE_232_AUTO` with the hardware currently in the DCE state."
     AsrlDcdState(i16, AsrlState),
 
     from = |value| {
@@ -170,7 +170,7 @@ impl_attr!(
     }
 );
 impl_attr!(
-    "VI_ATTR_ASRL_DSR_STATE shows the current state of the Data Set Ready (DSR) input signal."
+    "`VI_ATTR_ASRL_DSR_STATE` shows the current state of the Data Set Ready (DSR) input signal."
     AsrlDsrState(i16, AsrlState),
 
     from = |value| {
@@ -184,8 +184,8 @@ impl_attr!(
     }
 );
 impl_attr!(
-    "VI_ATTR_ASRL_DTR_STATE shows the current state of the Data Terminal Ready (DTR) input signal."
-    "When the VI_ATTR_ASRL_FLOW_CNTRL attribute is set to VI_ASRL_FLOW_DTR_DSR, this attribute is Read Only. Querying the value will return VI_STATE_UNKNOWN."
+    "`VI_ATTR_ASRL_DTR_STATE` shows the current state of the Data Terminal Ready (DTR) input signal."
+    "When the `VI_ATTR_ASRL_FLOW_CNTRL` attribute is set to `VI_ASRL_FLOW_DTR_DSR`, this attribute is Read Only. Querying the value will return `VI_STATE_UNKNOWN`."
     AsrlDtrState(i16, AsrlState),
 
     from = |value| {
@@ -203,9 +203,9 @@ impl_attr!(
     }
 );
 impl_attr!(
-    "VI_ATTR_ASRL_RI_STATE represents the current state of the Ring Indicator (RI) input signal."
+    "`VI_ATTR_ASRL_RI_STATE` represents the current state of the Ring Indicator (RI) input signal."
     "The RI signal is often used by modems to indicate that the telephone line is ringing."
-    "This attribute is Read Only except when the VI_ATTR_ASRL_WIRE_MODE attribute is set to VI_ASRL_WIRE_232_DCE, or VI_ASRL_WIRE_232_AUTO with the hardware currently in the DCE state."
+    "This attribute is Read Only except when the `VI_ATTR_ASRL_WIRE_MODE` attribute is set to `VI_ASRL_WIRE_232_DCE`, or `VI_ASRL_WIRE_232_AUTO` with the hardware currently in the DCE state."
     AsrlRiState(i16, AsrlState),
 
     from = |value| {
@@ -224,8 +224,8 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_ASRL_RTS_STATE is used to manually assert or unassert the Request To Send (RTS) output signal."
-    "When the VI_ATTR_ASRL_FLOW_CNTRL attribute is set to VI_ASRL_FLOW_RTS_CTS, this attribute is Read Only. Querying the value will return VI_STATE_UNKNOWN."
+    "`VI_ATTR_ASRL_RTS_STATE` is used to manually assert or unassert the Request To Send (RTS) output signal."
+    "When the `VI_ATTR_ASRL_FLOW_CNTRL` attribute is set to `VI_ASRL_FLOW_RTS_CTS`, this attribute is Read Only. Querying the value will return `VI_STATE_UNKNOWN`."
     AsrlRtsState(i16, AsrlState),
 
     from = |value| {
@@ -261,11 +261,11 @@ pub enum AsrlEnd {
     Break = bindings::VI_ASRL_END_BREAK,
 }
 impl_attr!(
-    "VI_ATTR_ASRL_END_IN indicates the method used to terminate read operations."
-    "- If it is set to VI_ASRL_END_NONE, the read will not terminate until all of the requested data is received (or an error occurs)."
-    "- If it is set to VI_ASRL_END_LAST_BIT, the read will terminate as soon as a character arrives with its last bit set. For example, if VI_ATTR_ASRL_DATA_BITS is set to 8, the read will terminate when a character arrives with the 8th bit set."
-    "- If it is set to VI_ASRL_END_TERMCHAR, the read will terminate as soon as the character in VI_ATTR_TERMCHAR is received. In this case, VI_ATTR_TERMCHAR_EN is ignored."
-    "Because the default value of VI_ATTR_TERMCHAR is 0Ah (linefeed), read operations on serial ports will stop reading whenever a linefeed is encountered. To change this behavior, you must change the value of one of these attributes—VI_ATTR_ASRL_END_IN or VI_ATTR_TERMCHAR."
+    "`VI_ATTR_ASRL_END_IN` indicates the method used to terminate read operations."
+    "- If it is set to `VI_ASRL_END_NONE`, the read will not terminate until all of the requested data is received (or an error occurs)."
+    "- If it is set to `VI_ASRL_END_LAST_BIT`, the read will terminate as soon as a character arrives with its last bit set. For example, if `VI_ATTR_ASRL_DATA_BITS` is set to 8, the read will terminate when a character arrives with the 8th bit set."
+    "- If it is set to `VI_ASRL_END_TERMCHAR`, the read will terminate as soon as the character in `VI_ATTR_TERMCHAR` is received. In this case, `VI_ATTR_TERMCHAR_EN` is ignored."
+    "Because the default value of `VI_ATTR_TERMCHAR` is 0Ah (linefeed), read operations on serial ports will stop reading whenever a linefeed is encountered. To change this behavior, you must change the value of one of these attributes — `VI_ATTR_ASRL_END_IN` or `VI_ATTR_TERMCHAR`."
     AsrlEndIn(u16, AsrlEnd),
 
     from = |value| {
@@ -283,11 +283,11 @@ impl_attr!(
     }
 );
 impl_attr!(
-    "VI_ATTR_ASRL_END_OUT indicates the method used to terminate write operations."
-    "If it is set to VI_ASRL_END_NONE, the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written."
-    "If it is set to VI_ASRL_END_LAST_BIT, and VI_ATTR_SEND_END_EN is set to VI_TRUE, the write will send all but the last character with the highest bit clear, then transmit the last character with the highest bit set. For example, if VI_ATTR_ASRL_DATA_BITS is set to 8, the write will clear the eighth bit for all but the last character, then transmit the last character with the eighth bit set. If VI_ATTR_SEND_END_EN is set to VI_FALSE, the write will send all the characters with the highest bit clear."
-    "If it is set to VI_ASRL_END_TERMCHAR, and VI_ATTR_SEND_END_EN is set to VI_TRUE, the write will send the character in VI_ATTR_TERMCHAR after the data being transmitted. If VI_ATTR_SEND_END_EN is set to VI_FALSE, the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written."
-    "If it is set to VI_ASRL_END_BREAK, and VI_ATTR_SEND_END_EN is set to VI_TRUE, the write will transmit a break after all the characters for the write have been sent. If VI_ATTR_SEND_END_EN is set to VI_FALSE, the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written."
+    "`VI_ATTR_ASRL_END_OUT` indicates the method used to terminate write operations."
+    "If it is set to `VI_ASRL_END_NONE`, the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written."
+    "If it is set to `VI_ASRL_END_LAST_BIT`, and `VI_ATTR_SEND_END_EN` is set to `VI_TRUE`, the write will send all but the last character with the highest bit clear, then transmit the last character with the highest bit set. For example, if `VI_ATTR_ASRL_DATA_BITS` is set to 8, the write will clear the eighth bit for all but the last character, then transmit the last character with the eighth bit set. If `VI_ATTR_SEND_END_EN` is set to `VI_FALSE`, the write will send all the characters with the highest bit clear."
+    "If it is set to `VI_ASRL_END_TERMCHAR`, and `VI_ATTR_SEND_END_EN` is set to `VI_TRUE`, the write will send the character in `VI_ATTR_TERMCHAR` after the data being transmitted. If `VI_ATTR_SEND_END_EN` is set to `VI_FALSE`, the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written."
+    "If it is set to `VI_ASRL_END_BREAK`, and `VI_ATTR_SEND_END_EN` is set to `VI_TRUE`, the write will transmit a break after all the characters for the write have been sent. If `VI_ATTR_SEND_END_EN` is set to ``VI_FALSE``, the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written."
     AsrlEndOut(u16, AsrlEnd),
 
     from = |value| {
@@ -306,7 +306,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_ASRL_REPLACE_CHAR specifies the character to be used to replace incoming characters that arrive with errors (such as parity error)."
+    "`VI_ATTR_ASRL_REPLACE_CHAR` specifies the character to be used to replace incoming characters that arrive with errors (such as parity error)."
     AsrlReplaceChar(u8, char),
 
     from = |value| {
@@ -324,7 +324,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_ASRL_XON_CHAR specifies the value of the XON character used for XON/XOFF flow control (both directions)."
+    "`VI_ATTR_ASRL_XON_CHAR` specifies the value of the XON character used for XON/XOFF flow control (both directions)."
     "If XON/XOFF flow control (software handshaking) is not being used, the value of this attribute is ignored."
     AsrlXonChar(u8, char),
 
@@ -343,7 +343,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_ASRL_XOFF_CHAR specifies the value of the XOFF character used for XON/XOFF flow control (both directions)."
+    "`VI_ATTR_ASRL_XOFF_CHAR` specifies the value of the XOFF character used for XON/XOFF flow control (both directions)."
     "If XON/XOFF flow control (software handshaking) is not being used, the value of this attribute is ignored."
     AsrlXoffChar(u8, char),
 

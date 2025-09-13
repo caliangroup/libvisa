@@ -2,7 +2,7 @@
 use crate::bindings;
 
 impl_attr!(
-    "For an INSTR session, VI_ATTR_VXI_LA specifies the logical address of the VXI or VME device used by the given session."
+    "For an INSTR session, `VI_ATTR_VXI_LA` specifies the logical address of the VXI or VME device used by the given session."
     "For a MEMACC or SERVANT session, this attribute specifies the logical address of the local controller."
     PxiDevNum(i16, i16),
 
@@ -29,7 +29,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_PXI_BUS_NUM specifies the PCI bus number of this device."
+    "`VI_ATTR_PXI_BUS_NUM` specifies the PCI bus number of this device."
     PxiBusNum(u16, u16),
 
     from = |value| {
@@ -41,7 +41,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_PXI_CHASSIS specifies the PXI chassis number of this device. Returns none if the number is not known (-1 raw value)."
+    "`VI_ATTR_PXI_CHASSIS` specifies the PXI chassis number of this device. Returns none if the number is not known (-1 raw value)."
     PxiChassis(i16, i16),
     from = |value| {
         match value {
@@ -52,7 +52,7 @@ impl_attr!(
 );
 
 impl_attr!(
-    "VI_ATTR_PXI_SLOTPATH specifies the slot path of this device."
+    "`VI_ATTR_PXI_SLOTPATH` specifies the slot path of this device."
     "The purpose of a PXI slot path is to describe the PCI bus hierarchy in a manner independent of the PCI bus number. PXI slot paths are a sequence of values representing the PCI device number and function number of a PCI module and each parent PCI bridge that routes the module to the host PCI bridge (bus 0). Each value is represented as \"dev[.func]\", where the function number is listed only if it is non-zero. When a PXI slot path includes multiple values, the values are comma-separated."
     "The string format of the attribute value looks like this:"
     "device1[.function1][,device2[.function2]][,...]"
@@ -78,7 +78,7 @@ pub enum PxiSlotLBus {
     StarTrigController = bindings::VI_PXI_STAR_TRIG_CONTROLLER,
 }
 impl_attr!(
-    "VI_ATTR_PXI_SLOT_LBUS_LEFT specifies the slot number or special feature connected to the local bus left lines of this device."
+    "`VI_ATTR_PXI_SLOT_LBUS_LEFT` specifies the slot number or special feature connected to the local bus left lines of this device."
     PxiSlotLbusLeft(i16, PxiSlotLBus),
 
     from = |value| {
@@ -100,7 +100,7 @@ impl_attr!(
     }
 );
 impl_attr!(
-    "VI_ATTR_PXI_SLOT_LBUS_RIGHT specifies the slot number or special feature connected to the local bus right lines of this device."
+    "`VI_ATTR_PXI_SLOT_LBUS_RIGHT` specifies the slot number or special feature connected to the local bus right lines of this device."
     PxiSlotLbusRight(i16, PxiSlotLBus),
 
     from = |value| {
@@ -224,72 +224,72 @@ impl_attr!(
 
 impl_attr!(
     "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemBaseBar0(ReadOnlyU32)
 );
 
 impl_attr!(
     "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemBaseBar1(ReadOnlyU32)
 );
 
 impl_attr!(
     "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemBaseBar2(ReadOnlyU32)
 );
 
 impl_attr!(
     "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemBaseBar3(ReadOnlyU32)
 );
 
 impl_attr!(
     "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemBaseBar4(ReadOnlyU32)
 );
 
 impl_attr!(
     "PXI memory base address assigned to the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemBaseBar5(ReadOnlyU32)
 );
 
 impl_attr!(
     "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemSizeBar0(ReadOnlyU32)
 );
 
 impl_attr!(
     "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemSizeBar1(ReadOnlyU32)
 );
 
 impl_attr!(
     "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemSizeBar2(ReadOnlyU32)
 );
 
 impl_attr!(
     "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemSizeBar3(ReadOnlyU32)
 );
 
 impl_attr!(
     "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemSizeBar4(ReadOnlyU32)
 );
 
 impl_attr!(
     "Memory size used by the device in the specified BAR."
-    "If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BARx is VI_PXI_ADDR_NONE, the value of this attribute is undefined for the given PXI device."
+    "If the value of the corresponding `VI_ATTR_PXI_MEM_TYPE_BARx` is `VI_PXI_ADDR_NONE`, the value of this attribute is undefined for the given PXI device."
     PxiMemSizeBar5(ReadOnlyU32)
 );
